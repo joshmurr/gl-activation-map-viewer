@@ -11,10 +11,15 @@ type anim = {
 export default class Animator {
   _animations: anim[] = []
 
-  animation(name: string, from: number, to: number, frameCount: number) {
-    const frames: number[] = []
-    for (let i = 0; i < frameCount; i++) {
-      frames.push(lerp(from, to, i / frameCount))
+  animation(name: string, from: any, to: any, frameCount: number) {
+    let frames: any = []
+
+    if (Array.isArray(from)) {
+      frames = this.arrayLerp(from, to, frameCount)
+    } else {
+      for (let i = 0; i < frameCount; i++) {
+        frames.push(lerp(from, to, i / frameCount))
+      }
     }
 
     let counter = 0
@@ -33,6 +38,27 @@ export default class Animator {
     }
 
     return anim
+  }
+
+  private arrayLerp(
+    from: number[],
+    to: number[],
+    frameCount: number
+  ): Array<number[]> {
+    if (from.length !== to.length) return
+
+    const frames: Array<number[]> = []
+
+    for (let i = 0; i < frameCount; i++) {
+      const frame: number[] = []
+      for (let j = 0; j < from.length; j++) {
+        const val = lerp(from[j], to[j], i / frameCount)
+        frame.push(val)
+      }
+      frames.push(frame)
+    }
+
+    return frames
   }
 
   get animations() {

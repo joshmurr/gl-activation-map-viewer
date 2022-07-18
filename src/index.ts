@@ -94,7 +94,10 @@ const quads: Array<{
 for (let i = 0, numQuads = 10; i < numQuads; i++) {
   const quad = new Quad(gl)
   quad.linkProgram(program)
-  quad.translate = [0, 0, 5 - i]
+
+  const initialTranslation: [number, number, number] = [0, 0, 5 - i]
+
+  quad.translate = initialTranslation
   //quad.rotate = { speed: 0.0005, axis: [0, 0, 1] }
   const uid = generateColourUid(i, 3)
 
@@ -103,8 +106,15 @@ for (let i = 0, numQuads = 10; i < numQuads; i++) {
     u_colourMult: [1, 1, 1],
   }
 
+  const popUp: [number, number, number] = [0, 0.8, 5 - i]
+
   const animations = {
-    translate: animHandler.animation('translate', 0, 0.5, 12),
+    translate: animHandler.animation(
+      'translate',
+      initialTranslation,
+      popUp,
+      12
+    ),
   }
 
   quads.push({ quad, uid, uniforms, animations })
@@ -139,8 +149,6 @@ canvas.addEventListener('mousemove', function (e) {
 let mouseX = -1
 let mouseY = -1
 let oldPickNdx = -1
-let oldPickColor: number[]
-let oldTranslation: [number, number, number]
 let frame = 0
 
 const debug = new Debug()
@@ -176,20 +184,12 @@ function draw(time: number) {
 
   quads.forEach(({ quad, uniforms, animations }, i) => {
     if (id - 1 === i) {
-      oldPickColor = uniforms.u_colour
       uniforms.u_colourMult = [0.3, 0.5, 0]
-      oldTranslation = [...quad.translate]
-      const newTranslation: [number, number, number] = [...oldTranslation]
-      newTranslation[1] = animations.translate.step()
-      quad.translate = newTranslation
-
+      quad.translate = animations.translate.step()
       oldPickNdx = id - 1
     } else {
       uniforms.u_colourMult = [1, 1, 1]
-      oldTranslation = [...quad.translate]
-      const newTranslation: [number, number, number] = [...oldTranslation]
-      newTranslation[1] = animations.translate.reverse()
-      quad.translate = newTranslation
+      quad.translate = animations.translate.reverse()
     }
   })
 
