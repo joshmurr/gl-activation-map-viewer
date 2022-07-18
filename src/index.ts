@@ -79,7 +79,14 @@ function generateColourUid(i: number, components = 4): Array<number> {
   return uid
 }
 
-const quads: Array<{ quad: Quad; uid: number[] }> = []
+const animHandler = new Animator()
+
+const quads: Array<{
+  quad: Quad
+  uid: number[]
+  uniforms: { [key: string]: any }
+  animations: { [key: string]: any }
+}> = []
 
 for (let i = 0, numQuads = 10; i < numQuads; i++) {
   const quad = new Quad(gl)
@@ -142,7 +149,7 @@ function draw(time: number) {
   gl.enable(gl.CULL_FACE)
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
-  quads.forEach(({ quad, uid }, i) => {
+  quads.forEach(({ quad, uid }) => {
     gl.bindVertexArray(quad.VAO)
     G.setUniforms(pickUniformSetters, {
       ...baseUniforms,
@@ -159,10 +166,25 @@ function draw(time: number) {
   const data = new Uint8Array(4)
   gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data)
   const id = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24)
-  if (id > 0) {
-    const idx = (id - 1) * 3
-    console.log(id)
-  }
+
+  quads.forEach(({ quad, uniforms, animations }, i) => {
+    if (id - 1 === i) {
+      oldPickColor = uniforms.u_colour
+      uniforms.u_colourMult = [0.3, 0.5, 0]
+      oldTranslation = [...quad.translate]
+      const newTranslation: [number, number, number] = [...oldTranslation]
+      newTranslation[1] = animations.translate.step()
+      quad.translate = newTranslation
+
+      oldPickNdx = id - 1
+    } else {
+      uniforms.u_colourMult = [1, 1, 1]
+      oldTranslation = [...quad.translate]
+      const newTranslation: [number, number, number] = [...oldTranslation]
+      newTranslation[1] = animations.translate.reverse()
+      quad.translate = newTranslation
+    }
+  })
 
   // RENDER -----------------------
   gl.useProgram(program)
@@ -173,19 +195,23 @@ function draw(time: number) {
   gl.enable(gl.CULL_FACE)
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
-  quads.forEach(({ quad, uid }) => {
+  quads.forEach(({ quad, uniforms }) => {
     gl.bindVertexArray(quad.VAO)
     G.setUniforms(renderUniformSetters, {
       ...baseUniforms,
       u_ModelMatrix: quad.updateModelMatrix(time),
-      u_id: uid,
+      ...uniforms,
     })
     gl.drawElements(gl.TRIANGLES, quad.numIndices, gl.UNSIGNED_SHORT, 0)
   })
 
+  debug.update()
+
   gl.bindVertexArray(null)
   gl.bindBuffer(gl.ARRAY_BUFFER, null)
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
+
+  frame++
 
   requestAnimationFrame(draw)
 }
