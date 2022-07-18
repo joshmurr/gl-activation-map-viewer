@@ -51,12 +51,13 @@ precision mediump float;
 
 in vec2 v_TexCoord;
 uniform sampler2D u_Texture;
-uniform vec3 u_id;
+uniform vec3 u_colour;
+uniform vec3 u_colourMult;
 
 out vec4 OUTCOLOUR;
 
 void main(){
-  OUTCOLOUR = vec4(v_TexCoord, 0.0, 1.0);
+  OUTCOLOUR = vec4(u_colour, 1.0) * vec4(u_colourMult, 1.0);
 }`
 
 const G = new GL_Handler()
@@ -87,7 +88,16 @@ for (let i = 0, numQuads = 10; i < numQuads; i++) {
   //quad.rotate = { speed: 0.0005, axis: [0, 0, 1] }
   const uid = generateColourUid(i, 3)
 
-  quads.push({ quad, uid })
+  const uniforms = {
+    u_colour: HSVtoRGB(i / numQuads, 1, 1),
+    u_colourMult: [1, 1, 1],
+  }
+
+  const animations = {
+    translate: animHandler.animation('translate', 0, 0.5, 12),
+  }
+
+  quads.push({ quad, uid, uniforms, animations })
 }
 
 // UNIFORMS ---------------------------
