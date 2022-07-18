@@ -1,5 +1,8 @@
 import { GL_Handler, Quad, Types as T } from 'gl-handler'
 import { vec3, mat4 } from 'gl-matrix'
+import { HSVtoRGB } from './utils'
+import Debug from './Debug'
+import Animator from './Animator'
 
 const pickingVS = `#version 300 es
 precision mediump float;
@@ -136,8 +139,12 @@ canvas.addEventListener('mousemove', function (e) {
 let mouseX = -1
 let mouseY = -1
 let oldPickNdx = -1
-let oldPickColor
+let oldPickColor: number[]
+let oldTranslation: [number, number, number]
 let frame = 0
+
+const debug = new Debug()
+debug.addField('ID', () => oldPickNdx.toString())
 
 function draw(time: number) {
   // PICKING ----------------------
