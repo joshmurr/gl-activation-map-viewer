@@ -4,9 +4,9 @@ import { ModelInfo } from './types'
 export default class Model {
   protected training = false
   protected model: tf.LayersModel
-  protected info: ModelInfo
-
   protected _loaded = false
+
+  public info: ModelInfo
 
   constructor(info: ModelInfo) {
     this.info = info
