@@ -35,7 +35,7 @@ export default class Layer {
       ]
 
       quad.translate = initialTranslation
-      //quad.rotate = { speed: 0.0005, axis: [0, 0, 1] }
+      quad.rotate = { speed: 0, angle: -Math.PI / 2, axis: [0, 0, 1] }
       const uid = this.generateColourUid(i + offset, 3)
 
       const data = layerData.activations[quadIds[i]]
