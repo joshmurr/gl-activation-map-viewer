@@ -1,4 +1,4 @@
-import { lerp } from './utils'
+import { EaseFn, default as easing } from './easingFuncs'
 
 type anim = {
   name: string
@@ -11,14 +11,20 @@ type anim = {
 export default class Animator {
   _animations: anim[] = []
 
-  animation(name: string, from: any, to: any, frameCount: number) {
+  animation(
+    name: string,
+    from: any,
+    to: any,
+    frameCount: number,
+    ease: EaseFn
+  ) {
     let frames: any = []
 
     if (Array.isArray(from)) {
-      frames = this.arrayLerp(from, to, frameCount)
+      frames = this.arrayLerp(from, to, frameCount, ease)
     } else {
       for (let i = 0; i < frameCount; i++) {
-        frames.push(lerp(from, to, i / frameCount))
+        frames.push(this.interpolator(from, to, i / frameCount, ease))
       }
     }
 
@@ -40,10 +46,15 @@ export default class Animator {
     return anim
   }
 
+  public interpolator(from: number, to: number, t: number, easeFn: EaseFn) {
+    return from * (1 - easing[easeFn](t)) + to * easing[easeFn](t)
+  }
+
   private arrayLerp(
     from: number[],
     to: number[],
-    frameCount: number
+    frameCount: number,
+    ease: EaseFn
   ): Array<number[]> {
     if (from.length !== to.length) return
 
@@ -52,7 +63,7 @@ export default class Animator {
     for (let i = 0; i < frameCount; i++) {
       const frame: number[] = []
       for (let j = 0; j < from.length; j++) {
-        const val = lerp(from[j], to[j], i / frameCount)
+        const val = this.interpolator(from[j], to[j], i / frameCount, ease)
         frame.push(val)
       }
       frames.push(frame)

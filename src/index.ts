@@ -113,7 +113,8 @@ for (let i = 0, numQuads = 10; i < numQuads; i++) {
       'translate',
       initialTranslation,
       popUp,
-      12
+      24,
+      'easeOutQuart'
     ),
   }
 
