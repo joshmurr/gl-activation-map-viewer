@@ -1,8 +1,10 @@
-import { GL_Handler, Quad, Types as T } from 'gl-handler'
+import { GL_Handler, Quad, Arcball, Types as T } from 'gl-handler'
+import { ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import { HSVtoRGB } from './utils'
 import Debug from './Debug'
 import Animator from './Animator'
+import Generator from './Generator'
 
 const pickingVS = `#version 300 es
 precision mediump float;
@@ -69,7 +71,10 @@ const gl = G.gl
 const program = G.shaderProgram(vert, outputFrag)
 const pickProgram = G.shaderProgram(pickingVS, pickingFS)
 
-let baseViewMat = G.viewMat({ pos: vec3.fromValues(8, 8, 16) })
+//const arcball = new Arcball(canvas.width, canvas.height)
+
+const camPos: [number, number, number] = [8, 8, 16]
+let viewMat = G.viewMat({ pos: vec3.fromValues(...camPos) })
 const projMat = G.defaultProjMat()
 const modelMat = mat4.create()
 
@@ -124,7 +129,7 @@ for (let i = 0, numQuads = 10; i < numQuads; i++) {
 // UNIFORMS ---------------------------
 const baseUniforms: T.UniformDescs = {
   u_ModelMatrix: modelMat,
-  u_ViewMatrix: baseViewMat,
+  u_ViewMatrix: viewMat,
   u_ProjectionMatrix: projMat,
 }
 const pickUniformSetters = G.getUniformSetters(pickProgram)
@@ -149,11 +154,32 @@ canvas.addEventListener('mousemove', function (e) {
 
 let mouseX = -1
 let mouseY = -1
+let mousedown = false
 let oldPickNdx = -1
 let frame = 0
 
 const debug = new Debug()
 debug.addField('ID', () => oldPickNdx.toString())
+
+async function init() {
+  // MODEL ------------------------------
+  const modelInfo: { [key: string]: ModelInfo } = {
+    dcgan64: {
+      description: 'DCGAN, 64x64 (16 MB)',
+      url: 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json',
+      size: 64,
+      latent_dim: 128,
+      draw_multiplier: 4,
+      animate_frame: 200,
+    },
+  }
+
+  const gen = new Generator(modelInfo.dcgan64)
+  await gen.load()
+  await gen.run()
+
+  // ------------------------------------
+}
 
 function draw(time: number) {
   // PICKING ----------------------
@@ -169,6 +195,7 @@ function draw(time: number) {
     gl.bindVertexArray(quad.VAO)
     G.setUniforms(pickUniformSetters, {
       ...baseUniforms,
+      u_ViewMatrix: viewMat,
       u_ModelMatrix: quad.updateModelMatrix(time),
       u_id: uid,
     })
@@ -208,6 +235,7 @@ function draw(time: number) {
     G.setUniforms(renderUniformSetters, {
       ...baseUniforms,
       u_ModelMatrix: quad.updateModelMatrix(time),
+      u_ViewMatrix: viewMat,
       ...uniforms,
     })
     gl.drawElements(gl.TRIANGLES, quad.numIndices, gl.UNSIGNED_SHORT, 0)
@@ -224,4 +252,38 @@ function draw(time: number) {
   requestAnimationFrame(draw)
 }
 
-requestAnimationFrame(draw)
+//canvas.addEventListener('mousemove', (e) => {
+//const rect = canvas.getBoundingClientRect()
+//mouseX = e.clientX - rect.left
+//mouseY = e.clientY - rect.top
+
+//if (mousedown) {
+//arcball.updateRotation(mouseX, mouseY)
+//arcball.applyRotationMatrix(modelMat)
+//}
+//})
+
+//canvas.addEventListener('mousedown', () => {
+//mousedown = true
+//arcball.startRotation(mouseX, mouseY)
+//})
+
+//canvas.addEventListener('mouseup', () => {
+//mousedown = false
+//arcball.stopRotation()
+//})
+
+//canvas.addEventListener('mouseout', () => {
+//mousedown = false
+//arcball.stopRotation()
+//})
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault()
+  camPos[2] = camPos[2] - e.deltaY * -0.001
+  viewMat = G.viewMat({ pos: vec3.fromValues(...camPos) })
+})
+
+//requestAnimationFrame(draw)
+
+init()
