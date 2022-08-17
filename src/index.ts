@@ -1,4 +1,4 @@
-import { GL_Handler, Arcball, Types as T } from 'gl-handler'
+import { GL_Handler, Camera, Types as T } from 'gl-handler'
 import { ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import Debug from './Debug'
@@ -75,9 +75,11 @@ const pickProgram = G.shaderProgram(pickingVS, pickingFS)
 //const arcball = new Arcball(canvas.width, canvas.height)
 
 const camPos: [number, number, number] = [5, 16, 26]
-let viewMat = G.viewMat({ pos: vec3.fromValues(...camPos) })
+let C = new Camera({ pos: vec3.fromValues(...camPos) })
 const projMat = G.defaultProjMat()
 const modelMat = mat4.create()
+
+C.initArcball(canvas)
 
 //const quads: Array<{
 //quad: Quad
@@ -119,7 +121,7 @@ const modelMat = mat4.create()
 // UNIFORMS ---------------------------
 const baseUniforms: T.UniformDescs = {
   u_ModelMatrix: modelMat,
-  u_ViewMatrix: viewMat,
+  u_ViewMatrix: C.viewMat,
   u_ProjectionMatrix: projMat,
 }
 const pickUniformSetters = G.getUniformSetters(pickProgram)
@@ -199,7 +201,7 @@ async function init() {
         gl.bindVertexArray(quad.VAO)
         G.setUniforms(pickUniformSetters, {
           ...baseUniforms,
-          u_ViewMatrix: viewMat,
+          u_ViewMatrix: C.viewMat,
           u_ModelMatrix: quad.updateModelMatrix(time),
           u_id: uid,
         })
@@ -249,12 +251,14 @@ async function init() {
         G.setUniforms(renderUniformSetters, {
           ...baseUniforms,
           u_ModelMatrix: quad.updateModelMatrix(time),
-          u_ViewMatrix: viewMat,
+          u_ViewMatrix: C.viewMat,
           ...uniforms,
         })
         gl.drawElements(gl.TRIANGLES, quad.numIndices, gl.UNSIGNED_SHORT, 0)
       })
     })
+
+    C.arcball()
 
     gl.bindVertexArray(null)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
@@ -290,11 +294,11 @@ async function init() {
   //arcball.stopRotation()
   //})
 
-  canvas.addEventListener('wheel', (e) => {
-    e.preventDefault()
-    camPos[2] = camPos[2] - e.deltaY * -0.001
-    viewMat = G.viewMat({ pos: vec3.fromValues(...camPos) })
-  })
+  //canvas.addEventListener('wheel', (e) => {
+  //e.preventDefault()
+  //camPos[2] = camPos[2] - e.deltaY * -0.001
+  //viewMat = G.viewMat({ pos: vec3.fromValues(...camPos) })
+  //})
 
   requestAnimationFrame(draw)
   // ------------------------------------
