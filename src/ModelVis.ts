@@ -112,6 +112,7 @@ export default class ModelVis {
       const canvas = document.createElement('canvas')
       canvas.width = w
       canvas.height = h
+      canvas.id = `act_${id}`
       const ctx = canvas.getContext('2d')
       const imageData = new ImageData(w, h)
       const data = acts[id]

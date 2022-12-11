@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
-import { Button, ModelInfo } from './types'
+import { ActivationSelection, Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import Debug from './Debug'
 import Generator from './Generator'
@@ -107,7 +107,7 @@ G.setFramebufferAttachmentSizes(
 let mouseX = -1
 let mouseY = -1
 let oldPickNdx = -1
-const currentActSelection = {
+const currentActSelection: ActivationSelection = {
   id: -1,
   relativeId: -1,
   data: new Float32Array(1).fill(0),
@@ -232,16 +232,22 @@ async function init() {
     gl.enable(gl.DEPTH_TEST)
     gl.enable(gl.CULL_FACE)
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+
     layerNames.forEach((layerName) => {
       const actInfo = activationStore[layerName]
       const quads = actInfo.meshes
 
       // RENDER -----------------------
       quads.forEach(({ quad, uniforms: quadUniforms }, i) => {
+        if (editor.needsUpdate) {
+          const [w, h] = currentActSelection.layerShape
+          currentActSelection.quad.uniforms.u_texture = G.createTexture(w, h, {
+            type: 'R32F',
+            data: currentActSelection.data,
+          })
+        }
+
         gl.bindVertexArray(quad.VAO)
-
-        const data = actInfo.activations[i]
-
         G.setUniforms(renderUniformSetters, {
           ...baseUniforms,
           u_ModelMatrix: quad.updateModelMatrix(time),
@@ -298,16 +304,13 @@ async function init() {
       Object.assign(currentActSelection, selection)
     }
   })
+  canvas.addEventListener('mousedown', function () {
+    /* console.log(currentActSelection.data) */
+    return false
+  })
 
   canvas.addEventListener('mouseup', function (e) {
     editor.show(currentActSelection)
-    /* const { quad, data, layerShape } = currentActSelection
-    const [w, h] = layerShape
-    const newData = data.slice().fill(0)
-    quad.uniforms.u_texture = G.createTexture(w, h, {
-      type: 'R32F',
-      data: newData,
-    }) */
   })
 
   requestAnimationFrame(draw)

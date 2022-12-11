@@ -1,3 +1,5 @@
+import { TypedArray } from '@tensorflow/tfjs'
+
 export interface ModelInfo {
   description: string
   url: string
@@ -36,3 +38,11 @@ export interface PixelData {
 }
 
 export type DrawCallback = (k: string, data: PixelData) => void
+
+export interface ActivationSelection {
+  id: number
+  relativeId: number
+  data: Float32Array
+  quad: Quad | null
+  layerShape: number[]
+}

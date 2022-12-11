@@ -1,6 +1,5 @@
 import * as tf from '@tensorflow/tfjs'
-import { DrawCallback, PixelData } from './types'
-import { float32toUint8 } from './utils'
+import { ActivationSelection, DrawCallback, PixelData } from './types'
 
 export default class Editor {
   private editor: HTMLElement
@@ -13,6 +12,7 @@ export default class Editor {
   private _needsUpdate = false
   private _applyToAll = false
   private currentUpdateActCB: DrawCallback
+  private currentActivationSelection: ActivationSelection
   private currentKernel: string
 
   constructor() {
@@ -88,7 +88,8 @@ export default class Editor {
     document.body.appendChild(this.editor)
   }
 
-  public show(currentAct: unknown) {
+  public show(currentAct: ActivationSelection) {
+    this.currentActivationSelection = currentAct
     const { data, layerShape } = currentAct
     const [w, h] = layerShape
     this.canvas.width = w
@@ -118,6 +119,15 @@ export default class Editor {
         imageData.data[ix + 3] = 255
       }
     }
+  }
+
+  private rgb2grayscale(data: ImageData) {
+    return data.data.reduce((acc, p, i) => {
+      if (i % 4 === 0) {
+        acc.push(p / 255)
+      }
+      return acc
+    }, [])
   }
 
   private addButton(
@@ -195,13 +205,18 @@ export default class Editor {
     data[1] += adder
     data[2] += adder
     this.ctx.putImageData(p, x, y)
-    if (this.currentUpdateActCB) {
-      this._needsUpdate = true
-      this.currentUpdateActCB(this.currentKernel, { p, x, y })
-    }
+    const rgbData = this.ctx.getImageData(
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height,
+    )
+    const grayscaleData = this.rgb2grayscale(rgbData)
+    this.currentActivationSelection.data.set(grayscaleData, 0)
+    this._needsUpdate = true
   }
 
-  imageToTensor(data: ImageData): tf.Tensor {
+  private imageToTensor(data: ImageData): tf.Tensor {
     const grayscale = data.data.reduce((acc, p, i) => {
       if (i % 4 === 0) {
         acc.push(p / 255)
