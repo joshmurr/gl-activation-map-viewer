@@ -26,7 +26,7 @@ export default class Generator extends Model {
     if (draw_multiplier === 1) {
       return y
     }
-    let size = y.shape[0]
+    const size = y.shape[0]
     return y
       .expandDims(2)
       .tile([1, 1, draw_multiplier, 1])

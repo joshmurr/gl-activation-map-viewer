@@ -12,13 +12,19 @@ export default class ModelVis {
   }
 
   constructor(model: Generator) {
-    const z = tf.randomNormal([1, model.info.latent_dim])
+    this.init(model)
+    this.activationStore = {}
+  }
 
+  public init(model: Generator) {
+    const z = tf.randomNormal([1, model.info.latent_dim])
     this.layers = model.getLayers()
     this.layerOutputs = model.getLayerOutputs(this.layers, z)
     this.layerNames = Object.keys(this.layerOutputs)
+  }
 
-    this.activationStore = {}
+  public update(model: Generator, z: tf.Tensor2D) {
+    this.layerOutputs = model.getLayerOutputs(this.layers, z)
   }
 
   public generateQuads(gl: GL_Handler, program: WebGLProgram) {
@@ -37,15 +43,24 @@ export default class ModelVis {
       const layerInfo = new Layer(
         gl,
         program,
-        layer,
+        layer /* layerData */,
         layerIdx,
-        offset,
-        totalQuads
+        offset /* by number of quads in each layer to uuid */,
+        totalQuads,
       )
       this.activationStore[name].meshes = layerInfo.quads
       offset += Object.keys(layer.activations).length
     })
   }
+
+  /* public updateActivations() {
+    this.layerNames.forEach((name, layerIdx) => {
+      const layer = this.activationStore[name]
+      if (!layer) return
+      layer.updateActivations()
+      })
+
+  } */
 
   private separateActivations(act: tf.Tensor) {
     const activations = []
@@ -62,21 +77,22 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations() {
-    this.layerNames.forEach((name) => {
+  public async getActivations(filter: (n: string) => boolean) {
+    this.layerNames.filter(filter).forEach((name) => {
       const layer = this.layerOutputs[name]
 
       if (layer.shape.length < 3) return
 
       this.activationStore[name] = {}
       this.activationStore[name].shape = layer.shape
-      this.activationStore[name].activations = {}
+      this.activationStore[name].activations = []
 
       const sepActs = this.separateActivations(layer)
       sepActs.forEach((act, i) => {
         const act_id = `${String(i).padStart(3, '0')}`
         const data = act.dataSync()
-        this.activationStore[name].activations[act_id] = data
+        /* this.activationStore[name].activations[act_id] = data */
+        this.activationStore[name].activations.push(data)
       })
     })
   }
@@ -107,7 +123,7 @@ export default class ModelVis {
 
   private basicCanvasUpdate(
     imageData: ImageData,
-    data: Float32Array | Int32Array | Uint8Array
+    data: Float32Array | Int32Array | Uint8Array,
   ) {
     const { width: w, height: h } = imageData
     for (let x = 0; x < w; x++) {

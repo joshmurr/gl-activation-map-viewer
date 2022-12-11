@@ -14,7 +14,7 @@ export default class Layer {
     },
     layerIdx: number,
     offset: number,
-    total: number
+    total: number,
   ) {
     this._quads = []
     const quadIds = Object.keys(layerData.activations)
@@ -60,13 +60,26 @@ export default class Layer {
           initialTranslation,
           popUp,
           3,
-          'linear'
+          'linear',
         ),
       }
 
       this._quads.push({ quad, uid, uniforms, animations })
     }
   }
+
+  /* public updateActivations(layerData: {
+    activations: { [key: string]: Float32Array }
+    shape: number[]
+  }) {
+    const quadIds = Object.keys(layerData.activations)
+    const numQuads = quadIds.length
+    for (let i = 0; i < numQuads; i++) {
+
+      const data = layerData.activations[quadIds[i]]
+
+    }
+  } */
 
   private generateColourUid(i: number, components = 4): Array<number> {
     const uid: Array<number> = []

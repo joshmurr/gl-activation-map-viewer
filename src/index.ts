@@ -1,3 +1,4 @@
+import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
 import { Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
@@ -5,6 +6,7 @@ import Debug from './Debug'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
+import { Tensor2D } from '@tensorflow/tfjs'
 
 const pickingVS = `#version 300 es
 precision mediump float;
@@ -80,43 +82,6 @@ const modelMat = mat4.create()
 
 C.initArcball(canvas)
 
-//const quads: Array<{
-//quad: Quad
-//uid: number[]
-//uniforms: { [key: string]: any }
-//animations: { [key: string]: any }
-//}> = []
-
-//for (let i = 0, numQuads = 10; i < numQuads; i++) {
-//const quad = new Quad(gl)
-//quad.linkProgram(program)
-
-//const initialTranslation: [number, number, number] = [0, 0, 5 - i]
-
-//quad.translate = initialTranslation
-////quad.rotate = { speed: 0.0005, axis: [0, 0, 1] }
-//const uid = generateColourUid(i, 3)
-
-//const uniforms = {
-//u_colour: HSVtoRGB(i / numQuads, 1, 1),
-//u_colourMult: [1, 1, 1],
-//}
-
-//const popUp: [number, number, number] = [0, 0.8, 5 - i]
-
-//const animations = {
-//translate: animHandler.animation(
-//'translate',
-//initialTranslation,
-//popUp,
-//24,
-//'easeOutQuart'
-//),
-//}
-
-//quads.push({ quad, uid, uniforms, animations })
-//}
-
 // UNIFORMS ---------------------------
 const baseUniforms: T.UniformDescs = {
   u_ModelMatrix: modelMat,
@@ -137,17 +102,18 @@ G.setFramebufferAttachmentSizes(
 )
 // ------------------------------------
 
-canvas.addEventListener('mousemove', function (e) {
-  const rect = this.getBoundingClientRect()
-  mouseX = e.clientX - rect.left
-  mouseY = e.clientY - rect.top
-})
-
 let mouseX = -1
 let mouseY = -1
-const mousedown = false
 let oldPickNdx = -1
-let frame = 0
+const currentActSelection = {
+  id: -1,
+  relativeId: -1,
+  data: new Float32Array(1).fill(0),
+  quad: null,
+  layerShape: [-1, -1],
+}
+/* const mousedown = false */
+/* let frame = 0 */
 
 const debug = new Debug()
 debug.addField('ID', () => oldPickNdx.toString())
@@ -170,26 +136,32 @@ async function init() {
   await gen.load()
 
   const vis = new ModelVis(gen)
-  await vis.getActivations()
+  const filterByWord = (word: string) => (n: string) => n.includes(word)
+  const name = 'activation'
+  const filter = filterByWord(name)
+  /* const filter = () => true */
+  await vis.getActivations(filter)
   vis.showLayerOnCanvases('activation_9')
   vis.generateQuads(G, program)
 
-  const activationStore = vis.activations
-  const layerNames = Object.keys(activationStore).filter(
-    (name) => activationStore[name],
-    //(name) => name.includes('activation')
-  )
+  let activationStore = vis.activations
+  const layerNames = Object.keys(activationStore).filter(filter)
 
   /* GUI */
   const gui = new GUI()
-  const predict = () => {
-    gen.run()
+  const random = async () => {
+    const z = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
+    await gen.run(z)
+    vis.update(gen, z)
+    await vis.getActivations(filter)
+    vis.generateQuads(G, program)
+    activationStore = vis.activations
   }
   const buttons: Button[] = [
     {
-      selector: '.predict-btn',
+      selector: '.rand-btn',
       eventListener: 'mouseup',
-      callback: predict,
+      callback: random,
     },
   ]
   gui.initButtons(buttons)
@@ -256,18 +228,19 @@ async function init() {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
     layerNames.forEach((layerName) => {
       const actInfo = activationStore[layerName]
-
       const quads = actInfo.meshes
 
       // RENDER -----------------------
-
-      quads.forEach(({ quad, uniforms }) => {
+      quads.forEach(({ quad, uniforms: quadUniforms }, i) => {
         gl.bindVertexArray(quad.VAO)
+
+        const data = actInfo.activations[i]
+
         G.setUniforms(renderUniformSetters, {
           ...baseUniforms,
           u_ModelMatrix: quad.updateModelMatrix(time),
           u_ViewMatrix: C.viewMat,
-          ...uniforms,
+          ...quadUniforms,
         })
         gl.drawElements(gl.TRIANGLES, quad.numIndices, gl.UNSIGNED_SHORT, 0)
       })
@@ -278,42 +251,58 @@ async function init() {
     gl.bindVertexArray(null)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
-    frame++
+    /* frame++ */
 
     requestAnimationFrame(draw)
   }
 
-  //canvas.addEventListener('mousemove', (e) => {
-  //const rect = canvas.getBoundingClientRect()
-  //mouseX = e.clientX - rect.left
-  //mouseY = e.clientY - rect.top
+  canvas.addEventListener('mousemove', function (e) {
+    const rect = this.getBoundingClientRect()
+    mouseX = e.clientX - rect.left
+    mouseY = e.clientY - rect.top
+  })
 
-  //if (mousedown) {
-  //arcball.updateRotation(mouseX, mouseY)
-  //arcball.applyRotationMatrix(modelMat)
-  //}
-  //})
+  canvas.addEventListener('mousedown', function () {
+    const findLayer = (id: number) => {
+      const bins = Object.values(activationStore).map(({ activations }) => {
+        /* Count how many activations in each layer */
+        /* return Object.keys(activations).reduce((n: number) => (n += 1), 0) */
+        return activations.length
+      })
+      const findLayerIter = (
+        id: number,
+        i: number,
+        bins: number[],
+      ): number[] => {
+        if (id > bins.reduce((a, k) => a + k, 0)) return [-1, id]
+        if (bins[i] - id > 0) return [i, id]
+        return findLayerIter(id - bins[i], (i += 1), bins)
+      }
 
-  //canvas.addEventListener('mousedown', () => {
-  //mousedown = true
-  //arcball.startRotation(mouseX, mouseY)
-  //})
+      return findLayerIter(id, 0, bins)
+    }
+    if (oldPickNdx > -1) {
+      const [bin, relativeId] = findLayer(oldPickNdx)
+      console.log(`ID: ${oldPickNdx} is in layer ${bin}`)
+      const layerName = Object.keys(activationStore)[bin]
+      const layer = activationStore[layerName]
+      const layerShape = layer.shape.slice(0, 2)
+      const data = layer.activations[relativeId]
+      const quad = layer.meshes[relativeId]
+      const selection = { id: oldPickNdx, relativeId, data, quad, layerShape }
+      Object.assign(currentActSelection, selection)
+    }
+  })
 
-  //canvas.addEventListener('mouseup', () => {
-  //mousedown = false
-  //arcball.stopRotation()
-  //})
-
-  //canvas.addEventListener('mouseout', () => {
-  //mousedown = false
-  //arcball.stopRotation()
-  //})
-
-  //canvas.addEventListener('wheel', (e) => {
-  //e.preventDefault()
-  //camPos[2] = camPos[2] - e.deltaY * -0.001
-  //viewMat = G.viewMat({ pos: vec3.fromValues(...camPos) })
-  //})
+  canvas.addEventListener('mouseup', function () {
+    const { quad, data, layerShape } = currentActSelection
+    const [w, h] = layerShape
+    const newData = data.slice().fill(0)
+    quad.uniforms.u_texture = G.createTexture(w, h, {
+      type: 'R32F',
+      data: newData,
+    })
+  })
 
   requestAnimationFrame(draw)
   // ------------------------------------
