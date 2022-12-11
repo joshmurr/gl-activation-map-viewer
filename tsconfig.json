@@ -5,11 +5,12 @@
     "noImplicitAny": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
-    "module": "es6",
-    "target": "es5",
+    "module": "es2020",
+    "target": "es2020",
     "jsx": "react",
+    "declaration": true,
     "allowJs": true,
     "skipLibCheck": true
   },
-  "exclude": ["spec"],
+  "exclude": ["spec", "./**/node_modules", "./node_modules"]
 }
