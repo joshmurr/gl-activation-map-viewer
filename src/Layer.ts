@@ -1,13 +1,10 @@
-import { GL_Handler, Quad } from 'gl-handler'
+import { GL_Handler, Quad as GLQuad } from 'gl-handler'
 import { HSVtoRGB } from './utils'
 import Animator from './Animator'
+import { Quad } from './types'
 
 export default class Layer {
-  private _quads: {
-    quad: Quad
-    uid: number[]
-    uniforms: { [key: string]: any }
-  }[]
+  private _quads: Quad[]
   constructor(
     G: GL_Handler,
     program: WebGLProgram,
@@ -25,7 +22,7 @@ export default class Layer {
     const [w, h] = layerData.shape.slice(2)
     const animHandler = new Animator()
     for (let i = 0; i < numQuads; i++) {
-      const quad = new Quad(G.gl)
+      const quad = new GLQuad(G.gl)
       quad.linkProgram(program)
 
       const initialTranslation: [number, number, number] = [
@@ -62,7 +59,7 @@ export default class Layer {
           'translate',
           initialTranslation,
           popUp,
-          6,
+          3,
           'linear'
         ),
       }

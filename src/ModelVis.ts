@@ -10,11 +10,8 @@ export default class ModelVis {
   private activationStore: {
     [key: string]: { [key: string]: any }
   }
-  private model: Generator
 
   constructor(model: Generator) {
-    this.model = model
-
     const z = tf.randomNormal([1, model.info.latent_dim])
 
     this.layers = model.getLayers()

@@ -6,3 +6,25 @@ export interface ModelInfo {
   draw_multiplier: number
   animate_frame: number
 }
+
+export interface Quad {
+  quad: Quad
+  uid: number[]
+  uniforms: { [key: string]: any }
+}
+
+export interface Button {
+  selector: string
+  eventListener: string
+  callback: () => void
+}
+
+export interface Checkbox {
+  name: string
+  selector: string
+}
+
+export interface DropdownOpts {
+  name: string
+  callback: () => void
+}

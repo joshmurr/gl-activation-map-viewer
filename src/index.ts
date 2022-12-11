@@ -1,9 +1,10 @@
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
-import { ModelInfo } from './types'
+import { Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import Debug from './Debug'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
+import GUI from './GUI'
 
 const pickingVS = `#version 300 es
 precision mediump float;
@@ -72,10 +73,8 @@ const gl = G.gl
 const program = G.shaderProgram(vert, outputFrag)
 const pickProgram = G.shaderProgram(pickingVS, pickingFS)
 
-//const arcball = new Arcball(canvas.width, canvas.height)
-
 const camPos: [number, number, number] = [5, 16, 26]
-let C = new Camera({ pos: vec3.fromValues(...camPos) })
+const C = new Camera({ pos: vec3.fromValues(...camPos) })
 const projMat = G.defaultProjMat()
 const modelMat = mat4.create()
 
@@ -134,7 +133,7 @@ G.setFramebufferAttachmentSizes(
   canvas.width,
   canvas.height,
   targetTexture,
-  depthBuffer
+  depthBuffer,
 )
 // ------------------------------------
 
@@ -146,7 +145,7 @@ canvas.addEventListener('mousemove', function (e) {
 
 let mouseX = -1
 let mouseY = -1
-let mousedown = false
+const mousedown = false
 let oldPickNdx = -1
 let frame = 0
 
@@ -158,7 +157,8 @@ async function init() {
   const modelInfo: { [key: string]: ModelInfo } = {
     dcgan64: {
       description: 'DCGAN, 64x64 (16 MB)',
-      url: 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json',
+      /* url: 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json', */
+      url: './model/model.json',
       size: 64,
       latent_dim: 128,
       draw_multiplier: 4,
@@ -176,9 +176,24 @@ async function init() {
 
   const activationStore = vis.activations
   const layerNames = Object.keys(activationStore).filter(
-    (name) => activationStore[name]
+    (name) => activationStore[name],
     //(name) => name.includes('activation')
   )
+
+  /* GUI */
+  const gui = new GUI()
+  const predict = () => {
+    gen.run()
+  }
+  const buttons: Button[] = [
+    {
+      selector: '.predict-btn',
+      eventListener: 'mouseup',
+      callback: predict,
+    },
+  ]
+  gui.initButtons(buttons)
+  /* GUI END */
 
   function draw(time: number) {
     // PICKING ----------------------
@@ -192,7 +207,7 @@ async function init() {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
     let offset = 0
-    layerNames.forEach((layerName, i) => {
+    layerNames.forEach((layerName) => {
       const actInfo = activationStore[layerName]
 
       const quads = actInfo.meshes
