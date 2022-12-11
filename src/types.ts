@@ -28,3 +28,11 @@ export interface DropdownOpts {
   name: string
   callback: () => void
 }
+
+export interface PixelData {
+  p: ImageData
+  x: number
+  y: number
+}
+
+export type DrawCallback = (k: string, data: PixelData) => void

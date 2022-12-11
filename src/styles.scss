@@ -1,0 +1,83 @@
+html {
+  box-sizing: border-box;
+}
+*,
+*:after,
+*:before {
+  box-sizing: inherit;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background-color: white;
+  font-family: Arial;
+}
+
+.sidebar {
+  .model-output {
+    canvas {
+      width: 128px;
+      height: 128px;
+
+      image-rendering: crisp-edges; /* for firefox */
+      image-rendering: pixelated; /* for everything else */
+    }
+  }
+}
+#editor {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  background-color: rgba(230, 230, 230, 0.9);
+  padding: 1em;
+  border-radius: 1em;
+  canvas {
+    margin: 0.8em;
+    display: block;
+    image-rendering: crisp-edges; /* for firefox */
+    image-rendering: pixelated; /* for everything else */
+    //max-width: 512px;
+    //max-height: 512px;
+  }
+
+  #tools {
+    margin: 3px;
+    span {
+      margin: 3px;
+      padding: 3px 6px;
+      background-color: rgb(180, 180, 180);
+      border-radius: 3px;
+    }
+  }
+}
+
+#activations {
+  canvas {
+    min-width: 32px;
+    min-height: 32px;
+
+    image-rendering: crisp-edges; /* for firefox */
+    image-rendering: pixelated; /* for everything else */
+  }
+}
+
+#buttons {
+  grid-area: header;
+  width: 100%;
+  height: 2em;
+  display: flex;
+  justify-content: center;
+}
+
+.hide {
+  display: none;
+}
+
+.show {
+  display: block;
+}
+
+.highlight {
+  background-color: yellow;
+  text-decoration: underline;
+}

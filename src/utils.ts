@@ -57,5 +57,28 @@ export const range = (
   y1: number,
   x2: number,
   y2: number,
-  t: number
+  t: number,
 ) => lerp(x2, y2, invlerp(x1, y1, t))
+
+export const mapRange = (
+  a: number,
+  in_min: number,
+  in_max: number,
+  out_min: number,
+  out_max: number,
+) => {
+  const m = (a - in_min) / (in_max - in_min)
+  const o = out_max - out_min
+  return m * o + out_min
+}
+
+export const float32toUint8 = (floatArray: Float32Array): Uint8ClampedArray => {
+  const len = floatArray.length
+  const uint8Array = new Uint8ClampedArray(len)
+  for (let i = 0; i < len; i += 1) {
+    const c = mapRange(floatArray[i], 0, 1, 0, 255)
+    uint8Array[i] = Math.floor(c)
+  }
+
+  return uint8Array
+}

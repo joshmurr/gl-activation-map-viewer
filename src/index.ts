@@ -7,6 +7,8 @@ import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
 import { Tensor2D } from '@tensorflow/tfjs'
+import Editor from './Editor'
+import './styles.scss'
 
 const pickingVS = `#version 300 es
 precision mediump float;
@@ -167,6 +169,10 @@ async function init() {
   gui.initButtons(buttons)
   /* GUI END */
 
+  /* EDITOR */
+  const editor = new Editor()
+  /* EDITOR END */
+
   function draw(time: number) {
     // PICKING ----------------------
 
@@ -283,10 +289,9 @@ async function init() {
     }
     if (oldPickNdx > -1) {
       const [bin, relativeId] = findLayer(oldPickNdx)
-      console.log(`ID: ${oldPickNdx} is in layer ${bin}`)
       const layerName = Object.keys(activationStore)[bin]
       const layer = activationStore[layerName]
-      const layerShape = layer.shape.slice(0, 2)
+      const layerShape = layer.shape.slice(2)
       const data = layer.activations[relativeId]
       const quad = layer.meshes[relativeId]
       const selection = { id: oldPickNdx, relativeId, data, quad, layerShape }
@@ -294,14 +299,15 @@ async function init() {
     }
   })
 
-  canvas.addEventListener('mouseup', function () {
-    const { quad, data, layerShape } = currentActSelection
+  canvas.addEventListener('mouseup', function (e) {
+    editor.show(currentActSelection)
+    /* const { quad, data, layerShape } = currentActSelection
     const [w, h] = layerShape
     const newData = data.slice().fill(0)
     quad.uniforms.u_texture = G.createTexture(w, h, {
       type: 'R32F',
       data: newData,
-    })
+    }) */
   })
 
   requestAnimationFrame(draw)
