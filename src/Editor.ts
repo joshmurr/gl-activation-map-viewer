@@ -94,8 +94,8 @@ export default class Editor {
     const [w, h] = layerShape
     this.canvas.width = w
     this.canvas.height = h
-    this.canvas.style.width = `${w * this.SCALE}px`
-    this.canvas.style.height = `${h * this.SCALE}px`
+    this.canvas.style.width = `${w * this.screenScale(w)}px`
+    this.canvas.style.height = `${h * this.screenScale(w)}px`
 
     const imageData = new ImageData(w, h)
     this.act2RGB(imageData, data)
@@ -205,6 +205,10 @@ export default class Editor {
     data[1] += adder
     data[2] += adder
     this.ctx.putImageData(p, x, y)
+    this.updateActivation()
+  }
+
+  private updateActivation() {
     const rgbData = this.ctx.getImageData(
       0,
       0,
@@ -254,14 +258,7 @@ export default class Editor {
     const x_off = Math.floor((width - size[0]) / 2)
     const y_off = Math.floor((height - size[1]) / 2)
     this.ctx.putImageData(newImageData, x_off, y_off)
-    if (this.currentUpdateActCB) {
-      this._needsUpdate = true
-      this.currentUpdateActCB(this.currentKernel, {
-        p: newImageData,
-        x: x_off,
-        y: y_off,
-      })
-    }
+    this.updateActivation()
   }
 
   private fill(colour: string) {
@@ -273,14 +270,7 @@ export default class Editor {
     )
     const newImageData = new ImageData(data, width, height)
     this.ctx.putImageData(newImageData, 0, 0)
-    if (this.currentUpdateActCB) {
-      this._needsUpdate = true
-      this.currentUpdateActCB(this.currentKernel, {
-        p: newImageData,
-        x: 0,
-        y: 0,
-      })
-    }
+    this.updateActivation()
   }
 
   private rotate() {
@@ -291,14 +281,7 @@ export default class Editor {
     this.ctx.rotate((90 * Math.PI) / 180)
     this.ctx.drawImage(this.canvas, -width / 2, -height / 2)
     this.ctx.restore()
-    if (this.currentUpdateActCB) {
-      this._needsUpdate = true
-      this.currentUpdateActCB(this.currentKernel, {
-        p: this.ctx.getImageData(0, 0, width, height),
-        x: 0,
-        y: 0,
-      })
-    }
+    this.updateActivation()
   }
 
   private separateActivations(act: tf.Tensor) {
@@ -358,16 +341,11 @@ export default class Editor {
     }
   }
 
-  public updateActivation(id: string, data: PixelData) {
-    const canvas = <HTMLCanvasElement>document.getElementById(id)
-    const canvasesToUpdate = this._applyToAll
-      ? this.activationsCont.getElementsByTagName('canvas')
-      : [canvas]
-    for (let i = 0; i < canvasesToUpdate.length; i++) {
-      const canvas = canvasesToUpdate[i]
-      const ctx = canvas.getContext('2d')
-      ctx.putImageData(data.p, data.x, data.y)
-    }
+  private screenScale(w: number) {
+    const maxLen = Math.min(window.innerHeight, window.innerWidth)
+    const targetSize = maxLen * 0.8
+    const scale = targetSize / w
+    return scale
   }
 
   private toggleApplyToAll() {

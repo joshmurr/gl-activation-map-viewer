@@ -10,6 +10,7 @@ export default class ModelVis {
   private activationStore: {
     [key: string]: { [key: string]: any }
   }
+  private numTensors: 0
 
   constructor(model: Generator) {
     this.init(model)
@@ -51,6 +52,7 @@ export default class ModelVis {
       this.activationStore[name].meshes = layerInfo.quads
       offset += Object.keys(layer.activations).length
     })
+    this.numTensors = offset
   }
 
   /* public updateActivations() {
@@ -81,15 +83,15 @@ export default class ModelVis {
     this.layerNames.filter(filter).forEach((name) => {
       const layer = this.layerOutputs[name]
 
-      if (layer.shape.length < 3) return
+      if (layer.shape.length < 3) return /* Filter out non-conv layers */
 
       this.activationStore[name] = {}
       this.activationStore[name].shape = layer.shape
       this.activationStore[name].activations = []
 
       const sepActs = this.separateActivations(layer)
-      sepActs.forEach((act, i) => {
-        const act_id = `${String(i).padStart(3, '0')}`
+      sepActs.forEach((act) => {
+        /* const act_id = `${String(i).padStart(3, '0')}` */
         const data = act.dataSync()
         /* this.activationStore[name].activations[act_id] = data */
         this.activationStore[name].activations.push(data)
@@ -139,7 +141,35 @@ export default class ModelVis {
     }
   }
 
+  public remakeActivations(layers: string[]) {
+    const remadeModel: {
+      layerName: string
+      tensor: tf.Tensor
+    }[] = []
+
+    layers.forEach((name) => {
+      const layer = this.activationStore[name]
+      const activations = layer.activations
+      const layerShape = layer.shape
+      const [w, h] = layerShape.slice(2)
+      const layerTensors: tf.Tensor[] = []
+      activations.map((data: Float32Array) => {
+        const tensor = tf.tensor(data).reshape([w, h, 1, 1]).squeeze()
+        layerTensors.push(tensor)
+      })
+      const activationMap = tf.stack(layerTensors, -1).expandDims(0)
+
+      remadeModel.push({ layerName: name, tensors: activationMap })
+    })
+
+    return remadeModel
+  }
+
   get activations() {
     return this.activationStore
+  }
+
+  get maxTensors() {
+    return this.numTensors
   }
 }

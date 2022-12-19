@@ -8,74 +8,14 @@ import ModelVis from './ModelVis'
 import GUI from './GUI'
 import { Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
+import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import './styles.scss'
-
-const pickingVS = `#version 300 es
-precision mediump float;
-
-in vec3 i_Position;
-
-uniform mat4 u_ProjectionMatrix;
-uniform mat4 u_ViewMatrix;
-uniform mat4 u_ModelMatrix;
-
-out vec2 v_TexCoord;
-
-void main(){
-  gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelMatrix * vec4(i_Position, 1.0);
-}`
-
-const pickingFS = `#version 300 es
-precision highp float;
-
-uniform vec3 u_id;
-
-out vec4 outColor;
-
-void main() {
-   outColor = vec4(u_id, 0.0);
-}
-`
-
-const vert = `#version 300 es
-precision mediump float;
-
-in vec3 i_Position;
-in vec2 i_TexCoord;
-
-uniform mat4 u_ProjectionMatrix;
-uniform mat4 u_ViewMatrix;
-uniform mat4 u_ModelMatrix;
-
-out vec2 v_TexCoord;
-out vec4 v_Colour;
-
-void main(){
-  gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelMatrix * vec4(i_Position, 1.0);
-  v_TexCoord = i_TexCoord;
-}`
-
-const outputFrag = `#version 300 es
-precision mediump float;
-
-in vec2 v_TexCoord;
-uniform sampler2D u_texture;
-uniform vec3 u_colour;
-uniform vec3 u_colourMult;
-
-out vec4 OUTCOLOUR;
-
-void main(){
-  vec4 data = vec4(texture(u_texture, v_TexCoord).rrr, 1.0);
-  OUTCOLOUR = data * vec4(u_colourMult, 1.0);
-  //OUTCOLOUR = vec4(u_colour, 1.0) * vec4(u_colourMult, 1.0);
-}`
 
 const G = new GL_Handler()
 const canvas = G.canvas(1024, 512)
 const gl = G.gl
-const program = G.shaderProgram(vert, outputFrag)
-const pickProgram = G.shaderProgram(pickingVS, pickingFS)
+const program = G.shaderProgram(renderVert, renderFrag)
+const pickProgram = G.shaderProgram(pickingVert, pickingFrag)
 
 const camPos: [number, number, number] = [5, 16, 26]
 const C = new Camera({ pos: vec3.fromValues(...camPos) })
@@ -106,6 +46,7 @@ G.setFramebufferAttachmentSizes(
 
 let mouseX = -1
 let mouseY = -1
+let mouseOnSlice = false
 let oldPickNdx = -1
 const currentActSelection: ActivationSelection = {
   id: -1,
@@ -114,8 +55,6 @@ const currentActSelection: ActivationSelection = {
   quad: null,
   layerShape: [-1, -1],
 }
-/* const mousedown = false */
-/* let frame = 0 */
 
 const debug = new Debug()
 debug.addField('ID', () => oldPickNdx.toString())
@@ -138,12 +77,12 @@ async function init() {
   await gen.load()
 
   const vis = new ModelVis(gen)
-  const filterByWord = (word: string) => (n: string) => n.includes(word)
-  const name = 'activation'
-  const filter = filterByWord(name)
-  /* const filter = () => true */
+  /* const filterByWord = (word: string) => (n: string) => n.includes(word) */
+  /* const name = 'activation' */
+  /* const filter = filterByWord(name) */
+  const filter = () => true
   await vis.getActivations(filter)
-  vis.showLayerOnCanvases('activation_9')
+  /* vis.showLayerOnCanvases('activation_9') */
   vis.generateQuads(G, program)
 
   let activationStore = vis.activations
@@ -159,11 +98,26 @@ async function init() {
     vis.generateQuads(G, program)
     activationStore = vis.activations
   }
+  const predict = () => {
+    const act = vis.remakeActivations(layerNames)
+    console.log(gen.getLayers())
+    /* const idx = layers.indexOf(layers.find((l) => l.name === layer)) + 1
+    const sliced = layers.slice(idx)
+
+    const z = vae.runLayers(sliced, act)
+    const logits = await vae.decodeZ(z)
+    vae.display(logits, gui.output.editOutput) */
+  }
   const buttons: Button[] = [
     {
       selector: '.rand-btn',
       eventListener: 'mouseup',
       callback: random,
+    },
+    {
+      selector: '.predict-btn',
+      eventListener: 'mouseup',
+      callback: predict,
     },
   ]
   gui.initButtons(buttons)
@@ -210,11 +164,13 @@ async function init() {
       const data = new Uint8Array(4)
       gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data)
       const id = data[0] + (data[1] << 8) + (data[2] << 16)
+      mouseOnSlice = id < vis.maxTensors
       quads.forEach(({ quad, uniforms, animations }, i) => {
         if (id - 1 === i + offset) {
           uniforms.u_colourMult = [0.3, 0.5, 0]
           quad.translate = animations.translate.step()
           oldPickNdx = id - 1
+          mouseOnSlice = true
         } else {
           uniforms.u_colourMult = [1, 1, 1]
           quad.translate = animations.translate.reverse()
@@ -263,7 +219,6 @@ async function init() {
     gl.bindVertexArray(null)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
-    /* frame++ */
 
     requestAnimationFrame(draw)
   }
@@ -276,11 +231,9 @@ async function init() {
 
   canvas.addEventListener('mousedown', function () {
     const findLayer = (id: number) => {
-      const bins = Object.values(activationStore).map(({ activations }) => {
-        /* Count how many activations in each layer */
-        /* return Object.keys(activations).reduce((n: number) => (n += 1), 0) */
-        return activations.length
-      })
+      const bins = Object.values(activationStore).map(
+        ({ activations }) => activations.length,
+      )
       const findLayerIter = (
         id: number,
         i: number,
@@ -304,12 +257,9 @@ async function init() {
       Object.assign(currentActSelection, selection)
     }
   })
-  canvas.addEventListener('mousedown', function () {
-    /* console.log(currentActSelection.data) */
-    return false
-  })
 
-  canvas.addEventListener('mouseup', function (e) {
+  canvas.addEventListener('mouseup', function () {
+    if (!mouseOnSlice) return false
     editor.show(currentActSelection)
   })
 
