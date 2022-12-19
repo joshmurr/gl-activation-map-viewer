@@ -4,13 +4,13 @@ import Layer from './Layer'
 import Generator from './Generator'
 
 export default class ModelVis {
-  private layers: tf.layers.Layer[]
+  private _layers: tf.layers.Layer[]
   private layerOutputs: { [key: string]: tf.Tensor }
   private layerNames: string[]
   private activationStore: {
-    [key: string]: { [key: string]: any }
+    [key: string]: { [key: string]: Layer }
   }
-  private numTensors: 0
+  private numTensors = 0
 
   constructor(model: Generator) {
     this.init(model)
@@ -19,13 +19,13 @@ export default class ModelVis {
 
   public init(model: Generator) {
     const z = tf.randomNormal([1, model.info.latent_dim])
-    this.layers = model.getLayers()
-    this.layerOutputs = model.getLayerOutputs(this.layers, z)
+    this._layers = model.getLayers()
+    this.layerOutputs = model.getLayerOutputs(this._layers, z)
     this.layerNames = Object.keys(this.layerOutputs)
   }
 
   public update(model: Generator, z: tf.Tensor2D) {
-    this.layerOutputs = model.getLayerOutputs(this.layers, z)
+    this.layerOutputs = model.getLayerOutputs(this._layers, z)
   }
 
   public generateQuads(gl: GL_Handler, program: WebGLProgram) {
@@ -79,11 +79,14 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations(filter: (n: string) => boolean) {
+  public async getActivations(filter = () => true) {
     this.layerNames.filter(filter).forEach((name) => {
       const layer = this.layerOutputs[name]
 
-      if (layer.shape.length < 3) return /* Filter out non-conv layers */
+      /* Filter out non-conv layers */
+      if (layer.shape.length < 3) {
+        return
+      }
 
       this.activationStore[name] = {}
       this.activationStore[name].shape = layer.shape
@@ -171,5 +174,9 @@ export default class ModelVis {
 
   get maxTensors() {
     return this.numTensors
+  }
+
+  get layers() {
+    return this._layers
   }
 }

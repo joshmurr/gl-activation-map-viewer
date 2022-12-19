@@ -11,9 +11,7 @@ export default class Editor {
   private SCALE = 25
   private _needsUpdate = false
   private _applyToAll = false
-  private currentUpdateActCB: DrawCallback
   private currentActivationSelection: ActivationSelection
-  private currentKernel: string
 
   constructor() {
     this.buildContainer()
@@ -90,7 +88,8 @@ export default class Editor {
 
   public show(currentAct: ActivationSelection) {
     this.currentActivationSelection = currentAct
-    const { data, layerShape } = currentAct
+    const { data, layerInfo } = currentAct
+    const layerShape = layerInfo.layer.shape.slice(2)
     const [w, h] = layerShape
     this.canvas.width = w
     this.canvas.height = h
@@ -234,19 +233,19 @@ export default class Editor {
   }
 
   public remakeActivation() {
-    const activations = this.activationsCont.getElementsByTagName('canvas')
-    const { layer } = this.activationsCont.dataset
-    const remake: tf.Tensor[] = []
-    for (let i = 0; activations[i]; i++) {
-      const act = activations[i]
-      const ctx = act.getContext('2d')
-      const data = ctx.getImageData(0, 0, act.width, act.height)
-      const tensor = this.imageToTensor(data).squeeze()
-      remake.push(tensor)
-    }
+    const { layer, name } = this.currentActivationSelection.layerInfo
+    const { activations } = layer
+    const layerShape = layer.shape
+    const [w, h] = layerShape.slice(2)
+    const layerTensors: tf.Tensor[] = []
+    activations.map((data: Float32Array) => {
+      const tensor = tf.tensor(data).reshape([w, h, 1, 1]).squeeze()
+      layerTensors.push(tensor)
+    })
 
-    const act = tf.stack(remake, -1).expandDims(0)
-    return { layer, act }
+    const act = tf.stack(layerTensors).expandDims(0)
+
+    return { layer, name, act }
   }
 
   private fillRect(colour: string, size: [number, number]) {

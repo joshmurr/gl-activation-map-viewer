@@ -1,4 +1,4 @@
-import { TypedArray } from '@tensorflow/tfjs'
+import * as tf from '@tensorflow/tfjs'
 
 export interface ModelInfo {
   description: string
@@ -44,5 +44,8 @@ export interface ActivationSelection {
   relativeId: number
   data: Float32Array
   quad: Quad | null
-  layerShape: number[]
+  layerInfo: {
+    name: string
+    layer: any
+  }
 }

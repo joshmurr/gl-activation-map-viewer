@@ -53,7 +53,10 @@ const currentActSelection: ActivationSelection = {
   relativeId: -1,
   data: new Float32Array(1).fill(0),
   quad: null,
-  layerShape: [-1, -1],
+  layerInfo: {
+    name: 'none',
+    layer: null,
+  },
 }
 
 const debug = new Debug()
@@ -90,23 +93,26 @@ async function init() {
 
   /* GUI */
   const gui = new GUI()
+  gui.initImageOutput('base')
+  gui.initImageOutput('output')
   const random = async () => {
     const z = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
-    await gen.run(z)
+    const logits = (await gen.run(z)) as tf.Tensor
     vis.update(gen, z)
     await vis.getActivations(filter)
     vis.generateQuads(G, program)
+    gen.displayOut(logits, gui.output.base)
     activationStore = vis.activations
   }
   const predict = () => {
-    const act = vis.remakeActivations(layerNames)
-    console.log(gen.getLayers())
-    /* const idx = layers.indexOf(layers.find((l) => l.name === layer)) + 1
+    const { name, act } = editor.remakeActivation()
+
+    const layers = vis.layers
+    const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
     const sliced = layers.slice(idx)
 
-    const z = vae.runLayers(sliced, act)
-    const logits = await vae.decodeZ(z)
-    vae.display(logits, gui.output.editOutput) */
+    const output = gen.runLayers(sliced, act)
+    gen.displayOut(output, gui.output.output)
   }
   const buttons: Button[] = [
     {
@@ -196,7 +202,7 @@ async function init() {
       // RENDER -----------------------
       quads.forEach(({ quad, uniforms: quadUniforms }, i) => {
         if (editor.needsUpdate) {
-          const [w, h] = currentActSelection.layerShape
+          const [w, h] = currentActSelection.layerInfo.layer.shape.slice(2)
           currentActSelection.quad.uniforms.u_texture = G.createTexture(w, h, {
             type: 'R32F',
             data: currentActSelection.data,
@@ -250,10 +256,19 @@ async function init() {
       const [bin, relativeId] = findLayer(oldPickNdx)
       const layerName = Object.keys(activationStore)[bin]
       const layer = activationStore[layerName]
-      const layerShape = layer.shape.slice(2)
       const data = layer.activations[relativeId]
       const quad = layer.meshes[relativeId]
-      const selection = { id: oldPickNdx, relativeId, data, quad, layerShape }
+
+      const selection = {
+        id: oldPickNdx,
+        relativeId,
+        data /* Specific slice */,
+        quad,
+        layerInfo: {
+          name: layerName,
+          layer: layer,
+        },
+      }
       Object.assign(currentActSelection, selection)
     }
   })

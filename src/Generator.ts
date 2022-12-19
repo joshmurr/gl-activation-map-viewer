@@ -8,18 +8,10 @@ export default class Generator extends Model {
   }
 
   public async run(inputZ?: tf.Tensor) {
-    const y = tf.tidy(() => {
+    return tf.tidy(() => {
       const z = inputZ || tf.randomNormal([1, this.info.latent_dim])
-      const y = this.model
-        .predict(z)
-        .squeeze()
-        .transpose([1, 2, 0])
-        .div(tf.scalar(2))
-        .add(tf.scalar(0.5)) as tf.Tensor2D
-      return this.image_enlarge(y, this.info.draw_multiplier)
+      return this.model.predict(z)
     })
-    const c = document.getElementById('c') as HTMLCanvasElement
-    await tf.browser.toPixels(y, c)
   }
 
   private image_enlarge(y: tf.Tensor2D, draw_multiplier: number) {
@@ -41,6 +33,18 @@ export default class Generator extends Model {
     tf.browser.toPixels(outputImg, canvas)
   }
 
+  public async displayOut(logits: tf.Tensor, canvas: HTMLCanvasElement) {
+    const y = tf.tidy(() => {
+      const y = logits
+        .squeeze()
+        .transpose([1, 2, 0])
+        .div(tf.scalar(2))
+        .add(tf.scalar(0.5)) as tf.Tensor2D
+      return this.image_enlarge(y, this.info.draw_multiplier)
+    })
+    await tf.browser.toPixels(y, canvas)
+  }
+
   public getLayerOutputs(layers: tf.layers.Layer[], X: tf.Tensor) {
     const activations: { [key: string]: tf.Tensor } = {}
     let input = X
@@ -54,7 +58,7 @@ export default class Generator extends Model {
   public runLayers(layers: tf.layers.Layer[], activation: tf.Tensor) {
     let act = activation
     layers.forEach((layer) => {
-      act = layer.call(act, null) as tf.Tensor
+      act = layer.call(act, { training: false }) as tf.Tensor
     })
     return act
   }
