@@ -8,7 +8,7 @@ export default class ModelVis {
   private layerOutputs: { [key: string]: tf.Tensor }
   private layerNames: string[]
   private activationStore: {
-    [key: string]: { [key: string]: Layer }
+    [key: string]: { [key: string]: any }
   }
   private numTensors = 0
 
@@ -79,7 +79,7 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations(filter = () => true) {
+  public async getActivations(filter: (word: string) => boolean) {
     this.layerNames.filter(filter).forEach((name) => {
       const layer = this.layerOutputs[name]
 
@@ -94,11 +94,18 @@ export default class ModelVis {
 
       const sepActs = this.separateActivations(layer)
       sepActs.forEach((act) => {
-        /* const act_id = `${String(i).padStart(3, '0')}` */
         const data = act.dataSync()
-        /* this.activationStore[name].activations[act_id] = data */
         this.activationStore[name].activations.push(data)
       })
+    })
+  }
+
+  public putActivations(layerName: string, act: tf.Tensor) {
+    const sepActs = this.separateActivations(act)
+    this.activationStore[layerName].activations = []
+    sepActs.forEach((_act) => {
+      const data = _act.dataSync()
+      this.activationStore[layerName].activations.push(data)
     })
   }
 
@@ -144,7 +151,7 @@ export default class ModelVis {
     }
   }
 
-  public remakeActivations(layers: string[]) {
+  /* public remakeActivations(layers: string[]) {
     const remadeModel: {
       layerName: string
       tensor: tf.Tensor
@@ -166,7 +173,7 @@ export default class ModelVis {
     })
 
     return remadeModel
-  }
+  } */
 
   get activations() {
     return this.activationStore

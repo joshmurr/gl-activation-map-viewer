@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs'
-import { ActivationSelection, DrawCallback, PixelData } from './types'
+import { ActivationSelection } from './types'
 
 export default class Editor {
   private editor: HTMLElement

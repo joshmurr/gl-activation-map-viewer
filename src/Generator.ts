@@ -41,7 +41,7 @@ export default class Generator extends Model {
         .div(tf.scalar(2))
         .add(tf.scalar(0.5)) as tf.Tensor2D
       return this.image_enlarge(y, this.info.draw_multiplier)
-    })
+    }) as tf.Tensor2D
     await tf.browser.toPixels(y, canvas)
   }
 
@@ -61,5 +61,14 @@ export default class Generator extends Model {
       act = layer.call(act, { training: false }) as tf.Tensor
     })
     return act
+  }
+
+  public *runLayersGen(layers: tf.layers.Layer[], activation: tf.Tensor) {
+    let act = activation
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i]
+      act = layer.call(act, { training: false }) as tf.Tensor
+      yield { layerName: layer.name, activations: act }
+    }
   }
 }

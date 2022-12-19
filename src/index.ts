@@ -58,6 +58,7 @@ const currentActSelection: ActivationSelection = {
     layer: null,
   },
 }
+let currentZ: tf.Tensor2D | null = null
 
 const debug = new Debug()
 debug.addField('ID', () => oldPickNdx.toString())
@@ -96,23 +97,31 @@ async function init() {
   gui.initImageOutput('base')
   gui.initImageOutput('output')
   const random = async () => {
-    const z = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
-    const logits = (await gen.run(z)) as tf.Tensor
-    vis.update(gen, z)
+    currentZ = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
+    const logits = (await gen.run(currentZ)) as tf.Tensor
+    vis.update(gen, currentZ)
     await vis.getActivations(filter)
     vis.generateQuads(G, program)
     gen.displayOut(logits, gui.output.base)
     activationStore = vis.activations
   }
-  const predict = () => {
+  const predict = async () => {
     const { name, act } = editor.remakeActivation()
 
     const layers = vis.layers
     const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
     const sliced = layers.slice(idx)
 
-    const output = gen.runLayers(sliced, act)
-    gen.displayOut(output, gui.output.output)
+    const activations = gen.runLayersGen(sliced, act)
+
+    let logits = null
+    let layerName = null
+    for ({ activations: logits, layerName } of activations) {
+      vis.putActivations(layerName, logits)
+    }
+    vis.generateQuads(G, program)
+
+    gen.displayOut(logits, gui.output.output)
   }
   const buttons: Button[] = [
     {
