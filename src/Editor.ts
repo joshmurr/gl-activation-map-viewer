@@ -12,6 +12,9 @@ export default class Editor {
   private _needsUpdate = false
   private _applyToAll = false
   private currentActivationSelection: ActivationSelection
+  private _quadsToUpdate: ActivationSelection[] = []
+  private _mousedownID: ReturnType<typeof setInterval>
+  private _brushSize = 3
 
   constructor() {
     this.buildContainer()
@@ -79,7 +82,7 @@ export default class Editor {
     )
 
     this.canvas = document.createElement('canvas')
-    this.ctx = this.canvas.getContext('2d')
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
     this.editor.appendChild(this.canvas)
     this.editor.appendChild(this.tools)
@@ -157,6 +160,10 @@ export default class Editor {
       this.draw(e)
     })
 
+    this.canvas.addEventListener('mouseup', () => {
+      clearInterval(this._mousedownID)
+    })
+
     document.addEventListener('keydown', (e) => {
       this.handleKeyDown(e)
     })
@@ -195,16 +202,25 @@ export default class Editor {
 
   private draw(event: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect()
-    const x = Math.floor((event.clientX - rect.left) / this.SCALE)
-    const y = Math.floor((event.clientY - rect.top) / this.SCALE)
-    const p = this.ctx.getImageData(x, y, 1, 1)
-    const data = p.data
-    const adder = this.SHIFT ? 10 : -10
-    data[0] += adder
-    data[1] += adder
-    data[2] += adder
-    this.ctx.putImageData(p, x, y)
+    const { width } = this.canvas
+    const scale = this.screenScale(width)
+    const x = Math.floor((event.clientX - rect.left) / scale)
+    const y = Math.floor((event.clientY - rect.top) / scale)
+
+    this.brush(x, y, this._brushSize)
     this.updateActivation()
+  }
+
+  private brush(x: number, y: number, size: number) {
+    const offset = Math.floor(size / 2)
+
+    const p = this.ctx.getImageData(x - offset, y - offset, size, size)
+    const adder = this.SHIFT ? 10 : -10
+
+    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? c : c + adder))
+    const newImageData = new ImageData(newData, size, size)
+
+    this.ctx.putImageData(newImageData, x - offset, y - offset)
   }
 
   private updateActivation() {
@@ -216,20 +232,8 @@ export default class Editor {
     )
     const grayscaleData = this.rgb2grayscale(rgbData)
     this.currentActivationSelection.data.set(grayscaleData, 0)
+    this._quadsToUpdate.push(this.currentActivationSelection)
     this._needsUpdate = true
-  }
-
-  private imageToTensor(data: ImageData): tf.Tensor {
-    const grayscale = data.data.reduce((acc, p, i) => {
-      if (i % 4 === 0) {
-        acc.push(p / 255)
-      }
-      return acc
-    }, [])
-
-    const tensor = tf.tensor(grayscale).reshape([data.width, data.height, 1, 1])
-
-    return tensor
   }
 
   public remakeActivation() {
@@ -250,7 +254,6 @@ export default class Editor {
 
   private fillRect(colour: string, size: [number, number]) {
     const { width, height } = this.canvas
-    //const imageData = this.ctx.getImageData(0, 0, width, height)
     const fillColour = this.text2Colour(colour)
     const newImageData = new ImageData(...size)
     newImageData.data.fill(fillColour)
@@ -271,6 +274,11 @@ export default class Editor {
     this.ctx.putImageData(newImageData, 0, 0)
     this.updateActivation()
   }
+
+  /* public fillOffscreen(colour: string) {
+    const { width, height } = this.canvas
+    const canvas = new OffscreenCanvas(width, height)
+  } */
 
   private rotate() {
     const { width, height } = this.canvas
@@ -357,5 +365,9 @@ export default class Editor {
 
   public get applyToAll() {
     return this._applyToAll
+  }
+
+  public set brushSize(val: number) {
+    this._brushSize = val
   }
 }

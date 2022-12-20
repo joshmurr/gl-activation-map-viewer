@@ -21,6 +21,12 @@ export interface Button {
   callback: () => void
 }
 
+export interface Slider {
+  name: string
+  eventListener: string
+  callback: () => void
+}
+
 export interface Checkbox {
   name: string
   selector: string

@@ -1,7 +1,4 @@
-/* import * as tf from '@tensorflow/tfjs' */
-
-/* import DataLoader from './DataLoader' */
-import { Button, Checkbox, DropdownOpts } from './types'
+import { Button, Checkbox, DropdownOpts, Slider } from './types'
 
 export default class GUI {
   private container: HTMLElement
@@ -9,6 +6,7 @@ export default class GUI {
   private sidebar: HTMLElement
   private outputSurfaces: { [key: string]: HTMLCanvasElement }
   private checkboxes: { [key: string]: HTMLInputElement }
+  private _sliders: { [key: string]: HTMLInputElement }
 
   constructor() {
     this.container = document.getElementById('container')
@@ -22,6 +20,7 @@ export default class GUI {
 
     this.outputSurfaces = {}
     this.checkboxes = {}
+    this._sliders = {}
   }
 
   public initButtons(buttons: Array<Button>) {
@@ -35,6 +34,14 @@ export default class GUI {
     checkboxes.forEach(({ name, selector }) => {
       const checkboxEl = document.querySelector(selector)
       this.checkboxes[name] = checkboxEl as HTMLInputElement
+    })
+  }
+
+  public initSliders(sliders: Array<Slider>) {
+    sliders.forEach(({ name, eventListener, callback }) => {
+      const sliderEl = document.querySelector(`input[name="${name}"]`)
+      sliderEl.addEventListener(eventListener, callback)
+      this._sliders[name] = sliderEl as HTMLInputElement
     })
   }
 
@@ -70,30 +77,7 @@ export default class GUI {
     return this.outputSurfaces
   }
 
-  /* public async showExamples(data: DataLoader) {
-    const examples = data.nextTestBatch(16)
-    const numExamples = examples.xs.shape[0]
-
-    const container =
-      document.getElementById('samples') || document.createElement('div')
-    container.innerHTML = ''
-    container.id = 'samples'
-    for (let i = 0; i < numExamples; i++) {
-      const imageTensor = tf.tidy(() => {
-        return examples.xs
-          .slice([i, 0], [1, examples.xs.shape[1]])
-          .reshape([28, 28, 1])
-      })
-
-      const canvas = document.createElement('canvas')
-      canvas.width = 28
-      canvas.height = 28
-      canvas.style.margin = '4px'
-      await tf.browser.toPixels(imageTensor as tf.Tensor2D, canvas)
-      container.appendChild(canvas)
-
-      imageTensor.dispose()
-    }
-    this.sidebar.appendChild(container)
-  } */
+  public get sliders() {
+    return this._sliders
+  }
 }
