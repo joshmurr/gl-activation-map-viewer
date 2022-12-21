@@ -10,6 +10,7 @@ import { Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import './styles.scss'
+import { findLayer } from './utils'
 
 const G = new GL_Handler()
 const canvas = G.canvas(1024, 512)
@@ -51,12 +52,8 @@ let oldPickNdx = -1
 const currentActSelection: ActivationSelection = {
   id: -1,
   relativeId: -1,
-  data: new Float32Array(1).fill(0),
-  quad: null,
-  layerInfo: {
-    name: 'none',
-    layer: null,
-  },
+  layerName: 'none',
+  layer: null,
 }
 let currentZ: tf.Tensor2D | null = null
 
@@ -85,12 +82,11 @@ async function init() {
   /* const name = 'activation' */
   /* const filter = filterByWord(name) */
   const filter = () => true
-  await vis.getActivations(filter)
+  await vis.getActivations(G, program, filter)
   /* vis.showLayerOnCanvases('activation_9') */
-  vis.generateQuads(G, program)
+  /* vis.generateQuads(G, program) */
 
-  let activationStore = vis.activations
-  const layerNames = Object.keys(activationStore).filter(filter)
+  const __layers = vis.__layers
 
   /* GUI */
   const gui = new GUI()
@@ -101,15 +97,15 @@ async function init() {
     currentZ = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
     const logits = (await gen.run(currentZ)) as tf.Tensor
     vis.update(gen, currentZ)
-    await vis.getActivations(filter)
-    vis.generateQuads(G, program)
+    await vis.getActivations(G, program, filter)
+    /* vis.generateQuads(G, program) */
     gen.displayOut(logits, gui.output.base)
-    activationStore = vis.activations
+    /* activationStore = vis.activations */
   }
   const predict = async () => {
     const { name, act } = editor.remakeActivation()
 
-    const layers = vis.layers
+    const layers = vis.tfLayers
     const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
     const sliced = layers.slice(idx)
 
@@ -143,6 +139,7 @@ async function init() {
   const editor = new Editor()
   /* EDITOR END */
 
+  console.log(__layers)
   function draw(time: number) {
     // PICKING ----------------------
 
@@ -155,20 +152,17 @@ async function init() {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
     let offset = 0
-    layerNames.forEach((layerName) => {
-      const actInfo = activationStore[layerName]
-
-      const quads = actInfo.meshes
-
-      quads.forEach(({ quad, uid }) => {
-        gl.bindVertexArray(quad.VAO)
+    __layers.forEach(({ activations, shape }) => {
+      activations.forEach(({ quad }) => {
+        const { mesh, uid } = quad
+        gl.bindVertexArray(mesh.VAO)
         G.setUniforms(pickUniformSetters, {
           ...baseUniforms,
           u_ViewMatrix: C.viewMat,
-          u_ModelMatrix: quad.updateModelMatrix(time),
+          u_ModelMatrix: mesh.updateModelMatrix(time),
           u_id: uid,
         })
-        gl.drawElements(gl.TRIANGLES, quad.numIndices, gl.UNSIGNED_SHORT, 0)
+        gl.drawElements(gl.TRIANGLES, mesh.numIndices, gl.UNSIGNED_SHORT, 0)
       })
 
       // Mouse pixel ---------
@@ -181,19 +175,21 @@ async function init() {
       gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data)
       const id = data[0] + (data[1] << 8) + (data[2] << 16)
       mouseOnSlice = id < vis.maxTensors
-      quads.forEach(({ quad, uniforms, animations }, i) => {
+      activations.forEach(({ quad }, i) => {
+        const { mesh, uniforms, animations } = quad
         if (id - 1 === i + offset) {
+          /* Mouse on slice with ID */
           uniforms.u_colourMult = [0.3, 0.5, 0]
-          quad.translate = animations.translate.step()
+          mesh.translate = animations.translate.step()
           oldPickNdx = id - 1
           mouseOnSlice = true
         } else {
           uniforms.u_colourMult = [1, 1, 1]
-          quad.translate = animations.translate.reverse()
+          mesh.translate = animations.translate.reverse()
         }
       })
 
-      offset += Object.keys(actInfo.activations).length
+      offset += shape[1]
 
       debug.update()
     })
@@ -205,28 +201,26 @@ async function init() {
     gl.enable(gl.CULL_FACE)
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
-    layerNames.forEach((layerName) => {
-      const actInfo = activationStore[layerName]
-      const quads = actInfo.meshes
-
+    __layers.forEach(({ activations }) => {
       // RENDER -----------------------
-      quads.forEach(({ quad, uniforms: quadUniforms }, i) => {
-        if (editor.needsUpdate) {
+      activations.forEach(({ quad }) => {
+        const { mesh, uniforms } = quad
+        /* if (editor.needsUpdate) {
           const [w, h] = currentActSelection.layerInfo.layer.shape.slice(2)
           currentActSelection.quad.uniforms.u_texture = G.createTexture(w, h, {
             type: 'R32F',
             data: currentActSelection.data,
           })
-        }
+        } */
 
-        gl.bindVertexArray(quad.VAO)
+        gl.bindVertexArray(mesh.VAO)
         G.setUniforms(renderUniformSetters, {
           ...baseUniforms,
-          u_ModelMatrix: quad.updateModelMatrix(time),
+          u_ModelMatrix: mesh.updateModelMatrix(time),
           u_ViewMatrix: C.viewMat,
-          ...quadUniforms,
+          ...uniforms,
         })
-        gl.drawElements(gl.TRIANGLES, quad.numIndices, gl.UNSIGNED_SHORT, 0)
+        gl.drawElements(gl.TRIANGLES, mesh.numIndices, gl.UNSIGNED_SHORT, 0)
       })
     })
 
@@ -246,38 +240,18 @@ async function init() {
   })
 
   canvas.addEventListener('mousedown', function () {
-    const findLayer = (id: number) => {
-      const bins = Object.values(activationStore).map(
-        ({ activations }) => activations.length,
-      )
-      const findLayerIter = (
-        id: number,
-        i: number,
-        bins: number[],
-      ): number[] => {
-        if (id > bins.reduce((a, k) => a + k, 0)) return [-1, id]
-        if (bins[i] - id > 0) return [i, id]
-        return findLayerIter(id - bins[i], (i += 1), bins)
-      }
-
-      return findLayerIter(id, 0, bins)
-    }
     if (oldPickNdx > -1) {
-      const [bin, relativeId] = findLayer(oldPickNdx)
-      const layerName = Object.keys(activationStore)[bin]
-      const layer = activationStore[layerName]
-      const data = layer.activations[relativeId]
-      const quad = layer.meshes[relativeId]
+      const [layerIdx, relativeId] = findLayer(oldPickNdx, __layers)
+      const layer = __layers[layerIdx]
+      const layerName = layer.name
+
+      console.log(layerIdx, relativeId, layer)
 
       const selection = {
         id: oldPickNdx,
         relativeId,
-        data /* Specific slice */,
-        quad,
-        layerInfo: {
-          name: layerName,
-          layer: layer,
-        },
+        layerName,
+        layer,
       }
       Object.assign(currentActSelection, selection)
     }
@@ -286,7 +260,7 @@ async function init() {
   canvas.addEventListener('mouseup', function () {
     if (!mouseOnSlice) return false
     console.log(currentActSelection)
-    editor.show(currentActSelection)
+    /* editor.show(currentActSelection) */
   })
 
   requestAnimationFrame(draw)

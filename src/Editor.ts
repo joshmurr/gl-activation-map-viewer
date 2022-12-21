@@ -11,7 +11,7 @@ export default class Editor {
   /* private SCALE = 25 */
   private _needsUpdate = false
   private _applyToAll = false
-  private currentActivationSelection: ActivationSelection
+  private currentActSelection: ActivationSelection
   private _quadsToUpdate: ActivationSelection[] = []
   private _brushSize = 3
 
@@ -69,6 +69,12 @@ export default class Editor {
         callback: () => this.rotate(),
       },
       {
+        text: 'DO LAYER',
+        parent: this.tools,
+        id: null,
+        callback: () => this.doLayer(),
+      },
+      {
         text: 'All',
         parent: this.tools,
         id: 'all',
@@ -112,7 +118,7 @@ export default class Editor {
   }
 
   public show(currentAct: ActivationSelection) {
-    this.currentActivationSelection = currentAct
+    this.currentActSelection = currentAct
     const { data, layerInfo } = currentAct
     const layerShape = layerInfo.layer.shape.slice(2)
     const [w, h] = layerShape
@@ -265,6 +271,17 @@ export default class Editor {
     this.ctx.putImageData(newImageData, x - offset, y - offset)
   }
 
+  private doLayer(ctx: CanvasRenderingContext2D) {
+    const { width, height } = ctx.canvas
+    const imageData = ctx.getImageData(0, 0, width, height)
+    const fillColour = this.text2Colour('grey')
+    const data = imageData.data.map((c, i) =>
+      (i + 1) % 4 === 0 ? c : fillColour,
+    )
+    const newImageData = new ImageData(data, width, height)
+    ctx.putImageData(newImageData, 0, 0)
+  }
+
   private updateActivation() {
     const rgbData = this.ctx.getImageData(
       0,
@@ -273,13 +290,28 @@ export default class Editor {
       this.canvas.height,
     )
     const grayscaleData = this.rgb2grayscale(rgbData)
-    this.currentActivationSelection.data.set(grayscaleData, 0)
-    this._quadsToUpdate.push(this.currentActivationSelection)
+    this.currentActSelection.data.set(grayscaleData, 0)
     this._needsUpdate = true
   }
 
+  /* private generateCtxsForLayer() {
+    const { activations, shape } =
+      this.currentActSelection.layerInfo.layer
+    const [w, h] = shape.slice(2)
+    const ctxs = activations.map((data: Float32Array) => {
+      const canvas = new OffscreenCanvas(w, h)
+      const ctx = canvas.getContext('2d')
+      const imageData = new ImageData(w, h)
+      this.act2RGB(imageData, data)
+      ctx.putImageData(imageData, 0, 0)
+
+      return { data, ctx }
+    })
+    return ctxs
+  } */
+
   public remakeActivation() {
-    const { layer, name } = this.currentActivationSelection.layerInfo
+    const { layer, name } = this.currentActSelection.layerInfo
     const { activations } = layer
     const layerShape = layer.shape
     const [w, h] = layerShape.slice(2)
@@ -317,11 +349,6 @@ export default class Editor {
     this.updateActivation()
   }
 
-  /* public fillOffscreen(colour: string) {
-    const { width, height } = this.canvas
-    const canvas = new OffscreenCanvas(width, height)
-  } */
-
   private rotate() {
     const { width, height } = this.canvas
     //const imageData = this.ctx.getImageData(0, 0, width, height)
@@ -331,63 +358,6 @@ export default class Editor {
     this.ctx.drawImage(this.canvas, -width / 2, -height / 2)
     this.ctx.restore()
     this.updateActivation()
-  }
-
-  private separateActivations(act: tf.Tensor) {
-    const activations = []
-
-    const shape = act.shape
-    const numActs = shape[3]
-
-    for (let i = 0; i < numActs; i++) {
-      const newShape = [shape[0], shape[1], shape[2], i + 1]
-      const chunk = act.stridedSlice([0, 0, 0, i], newShape, [1, 1, 1, 1])
-
-      activations.push(chunk.squeeze())
-    }
-    return activations
-  }
-
-  public showActivation(layerName: string, act: tf.Tensor) {
-    const sepActs = this.separateActivations(act)
-    const store: { [key: string]: HTMLCanvasElement } = {}
-    this.activationsCont.innerHTML = ''
-    this.activationsCont.dataset.layer = layerName
-    sepActs.forEach((act, i) => {
-      const [w, h] = act.shape
-      const canvas = document.createElement('canvas')
-      canvas.width = w
-      canvas.height = h
-      const act_id = `$a_${String(i).padStart(2, '0')}`
-      canvas.id = act_id
-      const ctx = canvas.getContext('2d')
-      const imageData = new ImageData(w, h)
-      const data = act.dataSync()
-      this.basicCanvasUpdate(imageData, data)
-      ctx.putImageData(imageData, 0, 0)
-      canvas.addEventListener('click', (e) => {
-        this.show(e, this.updateActivation)
-      })
-      this.activationsCont.appendChild(canvas)
-      store[act_id] = canvas
-    })
-  }
-
-  private basicCanvasUpdate(
-    imageData: ImageData,
-    data: Float32Array | Int32Array | Uint8Array,
-  ) {
-    const { width: w, height: h } = imageData
-    for (let x = 0; x < w; x++) {
-      for (let y = 0; y < h; y++) {
-        const ix = (y * w + x) * 4
-        const iv = y * w + x
-        imageData.data[ix + 0] = Math.floor(255 * data[iv])
-        imageData.data[ix + 1] = Math.floor(255 * data[iv])
-        imageData.data[ix + 2] = Math.floor(255 * data[iv])
-        imageData.data[ix + 3] = 255
-      }
-    }
   }
 
   private screenScale(w: number) {

@@ -1,3 +1,5 @@
+import type { ActivationStore, LayerInfo } from './types'
+
 export function HSVtoRGB(h: number, s: number, v: number): Array<number> {
   /* Expects 0 <= h, s, v <= 1 */
   let r: number
@@ -81,4 +83,16 @@ export const float32toUint8 = (floatArray: Float32Array): Uint8ClampedArray => {
   }
 
   return uint8Array
+}
+
+export const findLayer = (id: number, layers: LayerInfo[]) => {
+  const bins = layers.map(({ activations }) => activations.length)
+
+  const findLayerIter = (id: number, i: number, bins: number[]): number[] => {
+    if (id > bins.reduce((a, k) => a + k, 0)) return [-1, id]
+    if (bins[i] - id > 0) return [i, id]
+    return findLayerIter(id - bins[i], (i += 1), bins)
+  }
+
+  return findLayerIter(id, 0, bins)
 }

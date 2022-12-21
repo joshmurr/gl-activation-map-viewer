@@ -1,15 +1,15 @@
 import { GL_Handler } from 'gl-handler'
 import * as tf from '@tensorflow/tfjs'
-import Layer from './Layer'
 import Generator from './Generator'
+import { ActivationStore, LayerInfo } from './types'
+import QuadFactory from './QuadFactory'
 
 export default class ModelVis {
-  private _layers: tf.layers.Layer[]
+  private _tfLayers: tf.layers.Layer[]
   private layerOutputs: { [key: string]: tf.Tensor }
   private layerNames: string[]
-  private activationStore: {
-    [key: string]: { [key: string]: any }
-  }
+  private activationStore: ActivationStore
+  private _layers: LayerInfo[] = []
   private numTensors = 0
 
   constructor(model: Generator) {
@@ -19,50 +19,14 @@ export default class ModelVis {
 
   public init(model: Generator) {
     const z = tf.randomNormal([1, model.info.latent_dim])
-    this._layers = model.getLayers()
-    this.layerOutputs = model.getLayerOutputs(this._layers, z)
+    this._tfLayers = model.getLayers()
+    this.layerOutputs = model.getLayerOutputs(this._tfLayers, z)
     this.layerNames = Object.keys(this.layerOutputs)
   }
 
   public update(model: Generator, z: tf.Tensor2D) {
-    this.layerOutputs = model.getLayerOutputs(this._layers, z)
+    this.layerOutputs = model.getLayerOutputs(this._tfLayers, z)
   }
-
-  public generateQuads(gl: GL_Handler, program: WebGLProgram) {
-    let offset = 0
-    const totalQuads = this.layerNames.reduce((acc, name) => {
-      const layer = this.activationStore[name]
-      if (!layer) return acc
-      const k = Object.keys(layer.activations).length
-
-      return (acc += k)
-    }, 0)
-
-    this.layerNames.forEach((name, layerIdx) => {
-      const layer = this.activationStore[name]
-      if (!layer) return
-      const layerInfo = new Layer(
-        gl,
-        program,
-        layer /* layerData */,
-        layerIdx,
-        offset /* by number of quads in each layer to uuid */,
-        totalQuads,
-      )
-      this.activationStore[name].meshes = layerInfo.quads
-      offset += Object.keys(layer.activations).length
-    })
-    this.numTensors = offset
-  }
-
-  /* public updateActivations() {
-    this.layerNames.forEach((name, layerIdx) => {
-      const layer = this.activationStore[name]
-      if (!layer) return
-      layer.updateActivations()
-      })
-
-  } */
 
   private separateActivations(act: tf.Tensor) {
     const activations = []
@@ -79,8 +43,13 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations(filter: (word: string) => boolean) {
-    this.layerNames.filter(filter).forEach((name) => {
+  public async getActivations(
+    G: GL_Handler,
+    program: WebGLProgram,
+    filter: (word: string) => boolean,
+  ) {
+    let offset = 0
+    this.layerNames.filter(filter).forEach((name, layerIdx) => {
       const layer = this.layerOutputs[name]
 
       /* Filter out non-conv layers */
@@ -88,15 +57,25 @@ export default class ModelVis {
         return
       }
 
-      this.activationStore[name] = {}
-      this.activationStore[name].shape = layer.shape
-      this.activationStore[name].activations = []
+      const layerInfo: LayerInfo = {
+        name,
+        shape: layer.shape,
+        activations: [],
+      }
+
+      const quadFactory = new QuadFactory(G, program, layer.shape)
 
       const sepActs = this.separateActivations(layer)
-      sepActs.forEach((act) => {
+      sepActs.forEach((act, actIdx) => {
         const data = act.dataSync()
-        this.activationStore[name].activations.push(data)
+        const actInfo = {
+          data,
+          quad: quadFactory.generate(data, actIdx, layerIdx, offset),
+        }
+        layerInfo.activations.push(actInfo)
       })
+      this._layers.push(layerInfo)
+      offset += layer.shape[1]
     })
   }
 
@@ -151,39 +130,19 @@ export default class ModelVis {
     }
   }
 
-  /* public remakeActivations(layers: string[]) {
-    const remadeModel: {
-      layerName: string
-      tensor: tf.Tensor
-    }[] = []
-
-    layers.forEach((name) => {
-      const layer = this.activationStore[name]
-      const activations = layer.activations
-      const layerShape = layer.shape
-      const [w, h] = layerShape.slice(2)
-      const layerTensors: tf.Tensor[] = []
-      activations.map((data: Float32Array) => {
-        const tensor = tf.tensor(data).reshape([w, h, 1, 1]).squeeze()
-        layerTensors.push(tensor)
-      })
-      const activationMap = tf.stack(layerTensors, -1).expandDims(0)
-
-      remadeModel.push({ layerName: name, tensors: activationMap })
-    })
-
-    return remadeModel
-  } */
-
   get activations() {
     return this.activationStore
+  }
+
+  get __layers() {
+    return this._layers
   }
 
   get maxTensors() {
     return this.numTensors
   }
 
-  get layers() {
-    return this._layers
+  get tfLayers() {
+    return this._tfLayers
   }
 }

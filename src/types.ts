@@ -1,4 +1,5 @@
-import * as tf from '@tensorflow/tfjs'
+/* import * as tf from '@tensorflow/tfjs' */
+import { Quad } from 'gl-handler'
 
 export interface ModelInfo {
   description: string
@@ -9,11 +10,11 @@ export interface ModelInfo {
   animate_frame: number
 }
 
-export interface Quad {
+/* export interface Quad {
   quad: Quad
   uid: number[]
   uniforms: { [key: string]: any }
-}
+} */
 
 export interface Button {
   selector: string
@@ -45,13 +46,32 @@ export interface PixelData {
 
 export type DrawCallback = (k: string, data: PixelData) => void
 
+export interface ActivationStore {
+  [key: string]: { [key: string]: any }
+}
+
+export interface QuadInfo {
+  mesh: Quad
+  uid: number[]
+  uniforms: { [key: string]: any }
+  animations: { [key: string]: any }
+}
+
+export interface ActivationInfo {
+  data: Float32Array
+  quad: QuadInfo
+}
+
+export interface LayerInfo {
+  name: string
+  shape: number[]
+  activations: ActivationInfo[]
+}
+export type Activations = ActivationInfo[]
+
 export interface ActivationSelection {
   id: number
   relativeId: number
-  data: Float32Array
-  quad: Quad | null
-  layerInfo: {
-    name: string
-    layer: any
-  }
+  layerName: string
+  layer: any
 }
