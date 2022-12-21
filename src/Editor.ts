@@ -8,12 +8,11 @@ export default class Editor {
   private ctx: CanvasRenderingContext2D
   private tools: HTMLElement
   private SHIFT = false
-  private SCALE = 25
+  /* private SCALE = 25 */
   private _needsUpdate = false
   private _applyToAll = false
   private currentActivationSelection: ActivationSelection
   private _quadsToUpdate: ActivationSelection[] = []
-  private _mousedownID: ReturnType<typeof setInterval>
   private _brushSize = 3
 
   constructor() {
@@ -81,6 +80,29 @@ export default class Editor {
       this.addButton(text, parent, callback, id),
     )
 
+    const sliders = [
+      {
+        name: 'brush',
+        eventListener: 'change',
+        label: 'Brush Size',
+        min: 1,
+        max: 12,
+        callback: () => {
+          const el = document.querySelector(
+            'input[name="brush"]',
+          ) as HTMLInputElement
+          const val = el.value
+          this.brushSize = Number(val)
+        },
+        parent: this.tools,
+      },
+    ]
+
+    sliders.forEach(
+      ({ name, parent, eventListener, callback, min, max, label }) =>
+        this.addSlider(name, parent, eventListener, callback, min, max, label),
+    )
+
     this.canvas = document.createElement('canvas')
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
@@ -145,6 +167,30 @@ export default class Editor {
     parent.appendChild(button)
   }
 
+  private addSlider(
+    name: string,
+    parent: HTMLElement,
+    eventListener: string,
+    callback: (e?: MouseEvent) => void,
+    min: number,
+    max: number,
+    label: string,
+  ) {
+    const sliderEl = document.createElement('input') as HTMLInputElement
+    sliderEl.type = 'range'
+    sliderEl.name = name
+    sliderEl.id = name
+    sliderEl.min = min.toString()
+    sliderEl.max = max.toString()
+    sliderEl.addEventListener(eventListener, callback)
+    parent.appendChild(sliderEl)
+
+    const labelEl = document.createElement('label')
+    labelEl.htmlFor = name
+    labelEl.innerText = label
+    parent.appendChild(labelEl)
+  }
+
   private handleKeyDown(e: KeyboardEvent) {
     if (e.shiftKey) this.SHIFT = true
   }
@@ -158,10 +204,6 @@ export default class Editor {
     this.editor.classList.add('show')
     this.canvas.addEventListener('click', (e) => {
       this.draw(e)
-    })
-
-    this.canvas.addEventListener('mouseup', () => {
-      clearInterval(this._mousedownID)
     })
 
     document.addEventListener('keydown', (e) => {

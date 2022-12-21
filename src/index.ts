@@ -97,19 +97,6 @@ async function init() {
   gui.initImageOutput('base')
   gui.initImageOutput('output')
 
-  const sliders = [
-    {
-      name: 'brush',
-      eventListener: 'change',
-      callback: function () {
-        editor.brushSize = this.value
-      },
-    },
-  ]
-
-  gui.initSliders(sliders)
-  debug.addField('Brush Size', () => gui.sliders.brush.value)
-
   const random = async () => {
     currentZ = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
     const logits = (await gen.run(currentZ)) as tf.Tensor
