@@ -104,14 +104,13 @@ async function init() {
     const sliced = layers.slice(idx)
 
     const activations = gen.runLayersGen(sliced, act, idx)
-
     let logits = null
     let layerIdx = idx
+    const layerOffset = Math.abs(layers.length - __layers.length)
     for ({ logits, layerIdx } of activations) {
-      const layer = __layers[layerIdx]
-      vis.putActivations(G, program, layer, logits)
+      const layer = __layers[layerIdx - layerOffset]
+      vis.putActivations(layer, logits)
     }
-    /* vis.generateQuads(G, program) */
 
     gen.displayOut(logits, gui.output.output)
   }
@@ -241,7 +240,6 @@ async function init() {
 
   canvas.addEventListener('mouseup', function () {
     if (!mouseOnSlice) return false
-    console.log(currentActSelection)
     editor.show(currentActSelection)
   })
 

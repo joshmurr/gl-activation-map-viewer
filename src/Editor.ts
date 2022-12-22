@@ -5,7 +5,9 @@ export default class Editor {
   private editor: HTMLElement
   private activationsCont: HTMLElement
   private canvas: HTMLCanvasElement
+  private overlay: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
+  private oCtx: CanvasRenderingContext2D
   private tools: HTMLElement
   private SHIFT = false
   /* private SCALE = 25 */
@@ -68,12 +70,6 @@ export default class Editor {
         callback: () => this.rotate(),
       },
       {
-        text: 'DO LAYER',
-        parent: this.tools,
-        id: null,
-        callback: () => this.doLayer(),
-      },
-      {
         text: 'All',
         parent: this.tools,
         id: 'all',
@@ -92,6 +88,7 @@ export default class Editor {
         label: 'Brush Size',
         min: 1,
         max: 12,
+        value: 6,
         callback: () => {
           const el = document.querySelector(
             'input[name="brush"]',
@@ -104,14 +101,32 @@ export default class Editor {
     ]
 
     sliders.forEach(
-      ({ name, parent, eventListener, callback, min, max, label }) =>
-        this.addSlider(name, parent, eventListener, callback, min, max, label),
+      ({ name, parent, eventListener, callback, min, max, value, label }) =>
+        this.addSlider(
+          name,
+          parent,
+          eventListener,
+          callback,
+          min,
+          max,
+          value,
+          label,
+        ),
     )
+
+    const canvasCont = document.createElement('div')
+    canvasCont.classList.add('canvasCont')
 
     this.canvas = document.createElement('canvas')
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
-    this.editor.appendChild(this.canvas)
+    this.overlay = document.createElement('canvas')
+    this.oCtx = this.overlay.getContext('2d', { willReadFrequently: true })
+    /* this.oCtx.globalCompositeOperation = 'source-atop' */
+
+    canvasCont.appendChild(this.canvas)
+    canvasCont.appendChild(this.overlay)
+    this.editor.appendChild(canvasCont)
     this.editor.appendChild(this.tools)
     document.body.appendChild(this.editor)
   }
@@ -124,6 +139,11 @@ export default class Editor {
     this.canvas.height = h
     this.canvas.style.width = `${w * this.screenScale(w)}px`
     this.canvas.style.height = `${h * this.screenScale(w)}px`
+
+    this.overlay.width = w
+    this.overlay.height = h
+    this.overlay.style.width = `${w * this.screenScale(w)}px`
+    this.overlay.style.height = `${h * this.screenScale(w)}px`
 
     const imageData = new ImageData(w, h)
     const { data } = layer.activations[relativeId]
@@ -150,14 +170,15 @@ export default class Editor {
     }
   }
 
-  private rgb2grayscale(data: ImageData) {
-    return data.data.reduce((acc, p, i) => {
+  /* private rgb2grayscale(data: ImageData) {
+    const grayscale = data.data.reduce((acc, p, i) => {
       if (i % 4 === 0) {
         acc.push(p / 255)
       }
       return acc
     }, [])
-  }
+    return new Float32Array(grayscale)
+  } */
 
   private addButton(
     text: string,
@@ -179,6 +200,7 @@ export default class Editor {
     callback: (e?: MouseEvent) => void,
     min: number,
     max: number,
+    value: number,
     label: string,
   ) {
     const sliderEl = document.createElement('input') as HTMLInputElement
@@ -187,6 +209,7 @@ export default class Editor {
     sliderEl.id = name
     sliderEl.min = min.toString()
     sliderEl.max = max.toString()
+    sliderEl.value = value.toString()
     sliderEl.addEventListener(eventListener, callback)
     parent.appendChild(sliderEl)
 
@@ -207,7 +230,7 @@ export default class Editor {
   private showDisplay() {
     this.editor.classList.remove('hide')
     this.editor.classList.add('show')
-    this.canvas.addEventListener('click', (e) => {
+    this.overlay.addEventListener('click', (e) => {
       this.draw(e)
     })
 
@@ -248,8 +271,8 @@ export default class Editor {
   }
 
   private draw(event: MouseEvent) {
-    const rect = this.canvas.getBoundingClientRect()
-    const { width } = this.canvas
+    const rect = this.overlay.getBoundingClientRect()
+    const { width } = this.overlay
     const scale = this.screenScale(width)
     const x = Math.floor((event.clientX - rect.left) / scale)
     const y = Math.floor((event.clientY - rect.top) / scale)
@@ -261,38 +284,72 @@ export default class Editor {
   private brush(x: number, y: number, size: number) {
     const offset = Math.floor(size / 2)
 
-    const p = this.ctx.getImageData(x - offset, y - offset, size, size)
+    const p = this.oCtx.getImageData(x - offset, y - offset, size, size)
     const adder = this.SHIFT ? 10 : -10
 
-    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? c : c + adder))
+    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? 255 : c + adder))
     const newImageData = new ImageData(newData, size, size)
 
-    this.ctx.putImageData(newImageData, x - offset, y - offset)
-  }
-
-  private doLayer(ctx: CanvasRenderingContext2D) {
-    const { width, height } = ctx.canvas
-    const imageData = ctx.getImageData(0, 0, width, height)
-    const fillColour = this.text2Colour('grey')
-    const data = imageData.data.map((c, i) =>
-      (i + 1) % 4 === 0 ? c : fillColour,
-    )
-    const newImageData = new ImageData(data, width, height)
-    ctx.putImageData(newImageData, 0, 0)
+    this.oCtx.putImageData(newImageData, x - offset, y - offset)
   }
 
   private updateActivation() {
     if (!this.currentActSelection) return
-    const rgbData = this.ctx.getImageData(
+    const overlayData = this.oCtx.getImageData(
       0,
       0,
-      this.canvas.width,
-      this.canvas.height,
+      this.overlay.width,
+      this.overlay.height,
     )
-    const grayscaleData = this.rgb2grayscale(rgbData)
-    const { relativeId, layer } = this.currentActSelection
-    const quad = layer.activations[relativeId]
-    quad.update(grayscaleData)
+
+    if (this._applyToAll) {
+      this.currentActSelection.layer.activations.forEach((quad) => {
+        const grayscaleData = this.combineFloatWithRGBData(
+          quad.data,
+          overlayData.data,
+        )
+        quad.update(grayscaleData)
+      })
+    } else {
+      const rgbData = this.ctx.getImageData(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height,
+      )
+
+      const grayscaleData = this.combineRGBData(rgbData.data, overlayData.data)
+      const { relativeId, layer } = this.currentActSelection
+      const quad = layer.activations[relativeId]
+      quad.update(grayscaleData)
+    }
+  }
+
+  private combineRGBData(a: Uint8ClampedArray, b: Uint8ClampedArray) {
+    const grayscale = a.reduce((acc, c, i) => {
+      if (i % 4 === 0) {
+        b[i] > 0 ? acc.push(b[i] / 255) : acc.push(c / 255)
+      }
+      return acc
+    }, [])
+    return new Float32Array(grayscale)
+  }
+
+  private combineFloatData(a: Float32Array, b: Float32Array) {
+    return a.map((c, i) => {
+      return b[i] > 0 ? b[i] : c
+    })
+  }
+
+  private combineFloatWithRGBData(a: Float32Array, b: Uint8ClampedArray) {
+    const grayscale = b.reduce((acc, c, i) => {
+      if (i % 4 === 0) {
+        const blend = 1 - (1 - c / 255) * (1 - a[i / 4])
+        acc.push(blend)
+      }
+      return acc
+    }, [])
+    return new Float32Array(grayscale)
   }
 
   /* private generateCtxsForLayer() {
@@ -315,15 +372,13 @@ export default class Editor {
     const { layer } = this.currentActSelection
     const { activations } = layer
     const [w, h] = layer.shape.slice(2)
-    const layerTensors: tf.Tensor[] = []
-    activations.map((data: Float32Array) => {
-      const tensor = tf.tensor(data).reshape([w, h, 1, 1]).squeeze()
-      layerTensors.push(tensor)
+    const layerTensors = activations.map((quad) => {
+      return tf.tensor(quad.data).reshape([w, h, 1, 1]).squeeze()
     })
 
     const act = tf.stack(layerTensors).expandDims(0)
 
-    return { layer, name, act }
+    return { layer, act }
   }
 
   private fillRect(colour: string, size: [number, number]) {
@@ -339,13 +394,14 @@ export default class Editor {
 
   private fill(colour: string) {
     const { width, height } = this.canvas
-    const imageData = this.ctx.getImageData(0, 0, width, height)
+    const imageData = new ImageData(width, height)
     const fillColour = this.text2Colour(colour)
-    const data = imageData.data.map((c, i) =>
-      (i + 1) % 4 === 0 ? c : fillColour,
+    const newData = imageData.data.map((_, i) =>
+      /* Full alpha */
+      (i + 1) % 4 === 0 ? 255 : fillColour,
     )
-    const newImageData = new ImageData(data, width, height)
-    this.ctx.putImageData(newImageData, 0, 0)
+    imageData.data.set(newData, 0)
+    this.oCtx.putImageData(imageData, 0, 0)
     this.updateActivation()
   }
 

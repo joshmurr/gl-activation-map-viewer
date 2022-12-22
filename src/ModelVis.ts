@@ -79,28 +79,13 @@ export default class ModelVis {
     return this._layers
   }
 
-  public putActivations(
-    G: GL_Handler,
-    program: WebGLProgram,
-    layer: LayerInfo,
-    act: tf.Tensor,
-  ) {
+  public putActivations(layer: LayerInfo, act: tf.Tensor) {
     const sepActs = this.separateActivations(act)
-    const quadFactory = new QuadFactory(G, program, layer.shape)
-
-    layer.activations = []
-
     sepActs.forEach((act, actIdx) => {
       const data = act.dataSync()
-      const activation = quadFactory.generate(data, actIdx, layerIdx, offset)
-      layer.activations.push(activation)
+      const quad = layer.activations[actIdx]
+      quad.update(data)
     })
-
-    /* this.activationStore[layerName].activations = [] */
-    /* sepActs.forEach((_act) => { */
-    /*   const data = _act.dataSync() */
-    /*   this.activationStore[layerName].activations.push(data) */
-    /* }) */
   }
 
   public showLayerOnCanvases(layerName: string) {

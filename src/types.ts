@@ -76,5 +76,5 @@ export interface ActivationSelection {
   id: number
   relativeId: number
   layerName: string
-  layer: any
+  layer: LayerInfo
 }

@@ -25,23 +25,34 @@ body {
   }
 }
 #editor {
-  position: fixed;
+  position: absolute;
   top: 15px;
   left: 15px;
   background-color: rgba(230, 230, 230, 0.9);
   padding: 1em;
   border-radius: 1em;
-  canvas {
+
+  .canvasCont {
+    position: relative;
+    display: block;
     margin: 0.8em;
     display: block;
-    image-rendering: crisp-edges; /* for firefox */
-    image-rendering: pixelated; /* for everything else */
-    //max-width: 512px;
-    //max-height: 512px;
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      image-rendering: crisp-edges; /* for firefox */
+      image-rendering: pixelated; /* for everything else */
+      //max-width: 512px;
+      //max-height: 512px;
+    }
   }
 
   #tools {
     margin: 3px;
+    position: relative;
+    display: inline-block;
     span {
       margin: 3px;
       padding: 3px 6px;
