@@ -55,15 +55,14 @@ export default class QuadFactory {
     mesh.translate = initialTranslation
     mesh.rotate = { speed: 0, angle: -Math.PI / 2, axis: [0, 0, 1] }
 
-    const quad = new Quad(mesh, data, uid, texture, animations)
-    quad.updateFunc = (data: Float32Array) =>
-      this.G.createTexture(w, h, {
-        type: 'R32F',
-        data: data,
-      })
+    const quad = new Quad(mesh, data, [w, h], uid, texture, animations)
+    quad.updateFunc = (_tex: WebGLTexture, _data: Float32Array) => {
+      const gl = this.G.gl
+      gl.bindTexture(gl.TEXTURE_2D, _tex)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, w, h, 0, gl.RED, gl.FLOAT, _data)
+    }
 
     return quad
-    /* return { mesh: quad, uid, uniforms, animations, data } */
   }
 
   private generateColourUid(i: number, components = 4): Array<number> {

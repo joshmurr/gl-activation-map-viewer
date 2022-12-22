@@ -79,7 +79,12 @@ export default class ModelVis {
     return this._layers
   }
 
-  public putActivations(G, program, layer: LayerInfo, act: tf.Tensor) {
+  public putActivations(
+    G: GL_Handler,
+    program: WebGLProgram,
+    layer: LayerInfo,
+    act: tf.Tensor,
+  ) {
     const sepActs = this.separateActivations(act)
     const quadFactory = new QuadFactory(G, program, layer.shape)
 

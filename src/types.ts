@@ -1,5 +1,6 @@
 /* import * as tf from '@tensorflow/tfjs' */
-import { Quad } from 'gl-handler'
+import { Quad as GLQuad } from 'gl-handler'
+import type Quad from './Quad'
 
 export interface ModelInfo {
   description: string
@@ -51,7 +52,7 @@ export interface ActivationStore {
 }
 
 export interface QuadInfo {
-  mesh: Quad
+  mesh: GLQuad
   uid: number[]
   uniforms: { [key: string]: any }
   animations: { [key: string]: any }
@@ -66,7 +67,7 @@ export interface ActivationInfo {
 export interface LayerInfo {
   name: string
   shape: number[]
-  activations: QuadInfo[]
+  activations: Quad[]
 }
 
 export type Activations = ActivationInfo[]

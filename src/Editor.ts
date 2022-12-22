@@ -12,7 +12,6 @@ export default class Editor {
   private _needsUpdate = false
   private _applyToAll = false
   private currentActSelection: ActivationSelection
-  private _quadsToUpdate: ActivationSelection[] = []
   private _brushSize = 3
 
   constructor() {
@@ -118,6 +117,7 @@ export default class Editor {
   }
 
   public show(currentAct: ActivationSelection) {
+    this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = layer.shape.slice(2)
     this.canvas.width = w
@@ -291,9 +291,8 @@ export default class Editor {
     )
     const grayscaleData = this.rgb2grayscale(rgbData)
     const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-    data.set(grayscaleData, 0)
-    this._needsUpdate = true
+    const quad = layer.activations[relativeId]
+    quad.update(grayscaleData)
   }
 
   /* private generateCtxsForLayer() {

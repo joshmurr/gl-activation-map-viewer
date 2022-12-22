@@ -11,6 +11,7 @@ import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import './styles.scss'
 import { findLayer } from './utils'
+import Quad from './Quad'
 
 const G = new GL_Handler()
 const canvas = G.canvas(1024, 512)
@@ -196,14 +197,6 @@ async function init() {
     __layers.forEach(({ activations }) => {
       // RENDER -----------------------
       activations.forEach(({ mesh, uniforms }) => {
-        /* if (editor.needsUpdate) {
-          const [w, h] = currentActSelection.layerInfo.layer.shape.slice(2)
-          currentActSelection.quad.uniforms.u_texture = G.createTexture(w, h, {
-            type: 'R32F',
-            data: currentActSelection.data,
-          })
-        } */
-
         gl.bindVertexArray(mesh.VAO)
         G.setUniforms(renderUniformSetters, {
           ...baseUniforms,
