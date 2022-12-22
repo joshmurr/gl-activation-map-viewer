@@ -55,6 +55,7 @@ export interface QuadInfo {
   uid: number[]
   uniforms: { [key: string]: any }
   animations: { [key: string]: any }
+  data: Float32Array
 }
 
 export interface ActivationInfo {
@@ -65,8 +66,9 @@ export interface ActivationInfo {
 export interface LayerInfo {
   name: string
   shape: number[]
-  activations: ActivationInfo[]
+  activations: QuadInfo[]
 }
+
 export type Activations = ActivationInfo[]
 
 export interface ActivationSelection {

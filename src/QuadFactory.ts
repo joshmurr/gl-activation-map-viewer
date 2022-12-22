@@ -1,5 +1,6 @@
 import { GL_Handler, Quad as GLQuad } from 'gl-handler'
 import Animator from './Animator'
+import Quad from './Quad'
 
 export default class QuadFactory {
   private animHandler: Animator
@@ -20,34 +21,27 @@ export default class QuadFactory {
     layerIdx: number,
     offset: number,
   ) {
-    const quad = new GLQuad(this.G.gl)
-    quad.linkProgram(this.program)
+    const mesh = new GLQuad(this.G.gl)
+    mesh.linkProgram(this.program)
+
+    const uid = this.generateColourUid(quadIdx + offset, 3)
+
+    const [w, h] = this.shape.slice(2)
+    const texture = this.G.createTexture(w, h, {
+      type: 'R32F',
+      data: data,
+    })
 
     const initialTranslation: [number, number, number] = [
       layerIdx * 3 - 25,
       0,
       5 - quadIdx / 2,
     ]
-    quad.translate = initialTranslation
-    quad.rotate = { speed: 0, angle: -Math.PI / 2, axis: [0, 0, 1] }
-    const uid = this.generateColourUid(quadIdx + offset, 3)
-
-    const texture = this.G.createTexture(this.shape[2], this.shape[3], {
-      type: 'R32F',
-      data: data,
-    })
-
-    const uniforms = {
-      u_colourMult: [1, 1, 1],
-      u_texture: texture,
-    }
-
     const popUp: [number, number, number] = [
       layerIdx * 3 - 25,
       0.8,
       5 - quadIdx / 2,
     ]
-
     const animations = {
       translate: this.animHandler.animation(
         'translate',
@@ -57,7 +51,19 @@ export default class QuadFactory {
         'linear',
       ),
     }
-    return { mesh: quad, uid, uniforms, animations }
+
+    mesh.translate = initialTranslation
+    mesh.rotate = { speed: 0, angle: -Math.PI / 2, axis: [0, 0, 1] }
+
+    const quad = new Quad(mesh, data, uid, texture, animations)
+    quad.updateFunc = (data: Float32Array) =>
+      this.G.createTexture(w, h, {
+        type: 'R32F',
+        data: data,
+      })
+
+    return quad
+    /* return { mesh: quad, uid, uniforms, animations, data } */
   }
 
   private generateColourUid(i: number, components = 4): Array<number> {

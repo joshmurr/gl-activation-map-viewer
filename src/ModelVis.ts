@@ -1,8 +1,8 @@
-import { GL_Handler } from 'gl-handler'
+import type { GL_Handler } from 'gl-handler'
 import * as tf from '@tensorflow/tfjs'
-import Generator from './Generator'
 import { ActivationStore, LayerInfo } from './types'
 import QuadFactory from './QuadFactory'
+import type Generator from './Generator'
 
 export default class ModelVis {
   private _tfLayers: tf.layers.Layer[]
@@ -11,8 +11,10 @@ export default class ModelVis {
   private activationStore: ActivationStore
   private _layers: LayerInfo[] = []
   private numTensors = 0
+  private model: Generator
 
   constructor(model: Generator) {
+    this.model = model
     this.init(model)
     this.activationStore = {}
   }
@@ -24,8 +26,8 @@ export default class ModelVis {
     this.layerNames = Object.keys(this.layerOutputs)
   }
 
-  public update(model: Generator, z: tf.Tensor2D) {
-    this.layerOutputs = model.getLayerOutputs(this._tfLayers, z)
+  public update(z: tf.Tensor2D) {
+    this.layerOutputs = this.model.getLayerOutputs(this._tfLayers, z)
   }
 
   private separateActivations(act: tf.Tensor) {
@@ -43,13 +45,10 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations(
-    G: GL_Handler,
-    program: WebGLProgram,
-    filter: (word: string) => boolean,
-  ) {
+  public async getActivations(G: GL_Handler, program: WebGLProgram) {
+    this._layers = []
     let offset = 0
-    this.layerNames.filter(filter).forEach((name, layerIdx) => {
+    this.layerNames.forEach((name, layerIdx) => {
       const layer = this.layerOutputs[name]
 
       /* Filter out non-conv layers */
@@ -68,24 +67,35 @@ export default class ModelVis {
       const sepActs = this.separateActivations(layer)
       sepActs.forEach((act, actIdx) => {
         const data = act.dataSync()
-        const actInfo = {
-          data,
-          quad: quadFactory.generate(data, actIdx, layerIdx, offset),
-        }
-        layerInfo.activations.push(actInfo)
+        const activation = quadFactory.generate(data, actIdx, layerIdx, offset)
+        layerInfo.activations.push(activation)
       })
       this._layers.push(layerInfo)
       offset += layer.shape[1]
     })
+
+    this.numTensors = offset
+
+    return this._layers
   }
 
-  public putActivations(layerName: string, act: tf.Tensor) {
+  public putActivations(G, program, layer: LayerInfo, act: tf.Tensor) {
     const sepActs = this.separateActivations(act)
-    this.activationStore[layerName].activations = []
-    sepActs.forEach((_act) => {
-      const data = _act.dataSync()
-      this.activationStore[layerName].activations.push(data)
+    const quadFactory = new QuadFactory(G, program, layer.shape)
+
+    layer.activations = []
+
+    sepActs.forEach((act, actIdx) => {
+      const data = act.dataSync()
+      const activation = quadFactory.generate(data, actIdx, layerIdx, offset)
+      layer.activations.push(activation)
     })
+
+    /* this.activationStore[layerName].activations = [] */
+    /* sepActs.forEach((_act) => { */
+    /*   const data = _act.dataSync() */
+    /*   this.activationStore[layerName].activations.push(data) */
+    /* }) */
   }
 
   public showLayerOnCanvases(layerName: string) {
@@ -131,7 +141,7 @@ export default class ModelVis {
   }
 
   get activations() {
-    return this.activationStore
+    return null
   }
 
   get __layers() {

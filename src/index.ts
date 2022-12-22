@@ -55,7 +55,6 @@ const currentActSelection: ActivationSelection = {
   layerName: 'none',
   layer: null,
 }
-let currentZ: tf.Tensor2D | null = null
 
 const debug = new Debug()
 debug.addField('ID', () => oldPickNdx.toString())
@@ -78,15 +77,7 @@ async function init() {
   await gen.load()
 
   const vis = new ModelVis(gen)
-  /* const filterByWord = (word: string) => (n: string) => n.includes(word) */
-  /* const name = 'activation' */
-  /* const filter = filterByWord(name) */
-  const filter = () => true
-  await vis.getActivations(G, program, filter)
-  /* vis.showLayerOnCanvases('activation_9') */
-  /* vis.generateQuads(G, program) */
-
-  const __layers = vis.__layers
+  let __layers = await vis.getActivations(G, program)
 
   /* GUI */
   const gui = new GUI()
@@ -94,29 +85,32 @@ async function init() {
   gui.initImageOutput('output')
 
   const random = async () => {
-    currentZ = tf.randomNormal([1, modelInfo.dcgan64.latent_dim]) as Tensor2D
+    const currentZ = tf.randomNormal([
+      1,
+      modelInfo.dcgan64.latent_dim,
+    ]) as Tensor2D
     const logits = (await gen.run(currentZ)) as tf.Tensor
-    vis.update(gen, currentZ)
-    await vis.getActivations(G, program, filter)
-    /* vis.generateQuads(G, program) */
+    vis.update(currentZ)
+    __layers = await vis.getActivations(G, program)
     gen.displayOut(logits, gui.output.base)
-    /* activationStore = vis.activations */
   }
   const predict = async () => {
-    const { name, act } = editor.remakeActivation()
+    const { act } = editor.remakeActivation()
+    const { layerName } = currentActSelection
 
     const layers = vis.tfLayers
-    const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
+    const idx = layers.indexOf(layers.find((l) => l.name === layerName)) + 1
     const sliced = layers.slice(idx)
 
-    const activations = gen.runLayersGen(sliced, act)
+    const activations = gen.runLayersGen(sliced, act, idx)
 
     let logits = null
-    let layerName = null
-    for ({ activations: logits, layerName } of activations) {
-      vis.putActivations(layerName, logits)
+    let layerIdx = idx
+    for ({ logits, layerIdx } of activations) {
+      const layer = __layers[layerIdx]
+      vis.putActivations(G, program, layer, logits)
     }
-    vis.generateQuads(G, program)
+    /* vis.generateQuads(G, program) */
 
     gen.displayOut(logits, gui.output.output)
   }
@@ -153,8 +147,7 @@ async function init() {
 
     let offset = 0
     __layers.forEach(({ activations, shape }) => {
-      activations.forEach(({ quad }) => {
-        const { mesh, uid } = quad
+      activations.forEach(({ mesh, uid }) => {
         gl.bindVertexArray(mesh.VAO)
         G.setUniforms(pickUniformSetters, {
           ...baseUniforms,
@@ -175,8 +168,7 @@ async function init() {
       gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data)
       const id = data[0] + (data[1] << 8) + (data[2] << 16)
       mouseOnSlice = id < vis.maxTensors
-      activations.forEach(({ quad }, i) => {
-        const { mesh, uniforms, animations } = quad
+      activations.forEach(({ mesh, uniforms, animations }, i) => {
         if (id - 1 === i + offset) {
           /* Mouse on slice with ID */
           uniforms.u_colourMult = [0.3, 0.5, 0]
@@ -203,8 +195,7 @@ async function init() {
 
     __layers.forEach(({ activations }) => {
       // RENDER -----------------------
-      activations.forEach(({ quad }) => {
-        const { mesh, uniforms } = quad
+      activations.forEach(({ mesh, uniforms }) => {
         /* if (editor.needsUpdate) {
           const [w, h] = currentActSelection.layerInfo.layer.shape.slice(2)
           currentActSelection.quad.uniforms.u_texture = G.createTexture(w, h, {
@@ -245,8 +236,6 @@ async function init() {
       const layer = __layers[layerIdx]
       const layerName = layer.name
 
-      console.log(layerIdx, relativeId, layer)
-
       const selection = {
         id: oldPickNdx,
         relativeId,
@@ -260,7 +249,7 @@ async function init() {
   canvas.addEventListener('mouseup', function () {
     if (!mouseOnSlice) return false
     console.log(currentActSelection)
-    /* editor.show(currentActSelection) */
+    editor.show(currentActSelection)
   })
 
   requestAnimationFrame(draw)

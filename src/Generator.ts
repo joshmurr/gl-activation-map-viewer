@@ -63,12 +63,16 @@ export default class Generator extends Model {
     return act
   }
 
-  public *runLayersGen(layers: tf.layers.Layer[], activation: tf.Tensor) {
-    let act = activation
+  public *runLayersGen(
+    layers: tf.layers.Layer[],
+    activation: tf.Tensor,
+    layerIdxOffset: number,
+  ) {
+    let logits = activation
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i]
-      act = layer.call(act, { training: false }) as tf.Tensor
-      yield { layerName: layer.name, activations: act }
+      logits = layer.call(logits, { training: false }) as tf.Tensor
+      yield { layerIdx: layerIdxOffset + i, logits }
     }
   }
 }

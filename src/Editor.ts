@@ -118,16 +118,15 @@ export default class Editor {
   }
 
   public show(currentAct: ActivationSelection) {
-    this.currentActSelection = currentAct
-    const { data, layerInfo } = currentAct
-    const layerShape = layerInfo.layer.shape.slice(2)
-    const [w, h] = layerShape
+    const { relativeId, layer } = currentAct
+    const [w, h] = layer.shape.slice(2)
     this.canvas.width = w
     this.canvas.height = h
     this.canvas.style.width = `${w * this.screenScale(w)}px`
     this.canvas.style.height = `${h * this.screenScale(w)}px`
 
     const imageData = new ImageData(w, h)
+    const { data } = layer.activations[relativeId]
     this.act2RGB(imageData, data)
 
     this.ctx.putImageData(imageData, 0, 0)
@@ -283,6 +282,7 @@ export default class Editor {
   }
 
   private updateActivation() {
+    if (!this.currentActSelection) return
     const rgbData = this.ctx.getImageData(
       0,
       0,
@@ -290,7 +290,9 @@ export default class Editor {
       this.canvas.height,
     )
     const grayscaleData = this.rgb2grayscale(rgbData)
-    this.currentActSelection.data.set(grayscaleData, 0)
+    const { relativeId, layer } = this.currentActSelection
+    const { data } = layer.activations[relativeId]
+    data.set(grayscaleData, 0)
     this._needsUpdate = true
   }
 
@@ -311,10 +313,9 @@ export default class Editor {
   } */
 
   public remakeActivation() {
-    const { layer, name } = this.currentActSelection.layerInfo
+    const { layer } = this.currentActSelection
     const { activations } = layer
-    const layerShape = layer.shape
-    const [w, h] = layerShape.slice(2)
+    const [w, h] = layer.shape.slice(2)
     const layerTensors: tf.Tensor[] = []
     activations.map((data: Float32Array) => {
       const tensor = tf.tensor(data).reshape([w, h, 1, 1]).squeeze()
