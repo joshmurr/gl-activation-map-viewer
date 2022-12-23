@@ -61,7 +61,7 @@ export default class Editor {
         text: 'Rect',
         parent: this.tools,
         id: null,
-        callback: () => this.fillRect('black', [6, 6]),
+        callback: () => this.fillRect('white', [8, 8]),
       },
       {
         text: 'Rotate',
@@ -292,7 +292,7 @@ export default class Editor {
     this.oCtx.putImageData(newImageData, x - offset, y - offset)
   }
 
-  private updateActivation(blendMode?: string) {
+  private updateActivation(blendMode = 'alpha') {
     if (!this.currentActSelection) return
     const overlayData = this.oCtx.getImageData(
       0,
@@ -306,7 +306,7 @@ export default class Editor {
         const grayscaleData = this.combineFloatWithRGBData(
           quad.data,
           overlayData.data,
-          'alpha',
+          blendMode,
         )
         quad.update(grayscaleData)
       })
@@ -380,13 +380,15 @@ export default class Editor {
   }
 
   private fillRect(colour: string, size: [number, number]) {
-    const { width, height } = this.canvas
+    const { width, height } = this.overlay
     const fillColour = this.text2Colour(colour)
     const newImageData = new ImageData(...size)
     newImageData.data.fill(fillColour)
+    const newData = newImageData.data.map((c, i) => (i % 4 === 3 ? 255 : c))
     const x_off = Math.floor((width - size[0]) / 2)
     const y_off = Math.floor((height - size[1]) / 2)
-    this.ctx.putImageData(newImageData, x_off, y_off)
+    newImageData.data.set(newData, 0)
+    this.oCtx.putImageData(newImageData, x_off, y_off)
     this.updateActivation()
   }
 
