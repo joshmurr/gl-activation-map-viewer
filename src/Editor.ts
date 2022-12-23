@@ -122,7 +122,6 @@ export default class Editor {
 
     this.overlay = document.createElement('canvas')
     this.oCtx = this.overlay.getContext('2d', { willReadFrequently: true })
-    /* this.oCtx.globalCompositeOperation = 'source-atop' */
 
     canvasCont.appendChild(this.canvas)
     canvasCont.appendChild(this.overlay)
@@ -278,7 +277,7 @@ export default class Editor {
     const y = Math.floor((event.clientY - rect.top) / scale)
 
     this.brush(x, y, this._brushSize)
-    this.updateActivation()
+    this.updateActivation('alpha')
   }
 
   private brush(x: number, y: number, size: number) {
@@ -287,13 +286,13 @@ export default class Editor {
     const p = this.oCtx.getImageData(x - offset, y - offset, size, size)
     const adder = this.SHIFT ? 10 : -10
 
-    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? 255 : c + adder))
+    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? c + adder : 255))
     const newImageData = new ImageData(newData, size, size)
 
     this.oCtx.putImageData(newImageData, x - offset, y - offset)
   }
 
-  private updateActivation() {
+  private updateActivation(blendMode?: string) {
     if (!this.currentActSelection) return
     const overlayData = this.oCtx.getImageData(
       0,
@@ -307,6 +306,7 @@ export default class Editor {
         const grayscaleData = this.combineFloatWithRGBData(
           quad.data,
           overlayData.data,
+          'alpha',
         )
         quad.update(grayscaleData)
       })
@@ -318,17 +318,28 @@ export default class Editor {
         this.canvas.height,
       )
 
-      const grayscaleData = this.combineRGBData(rgbData.data, overlayData.data)
+      const grayscaleData = this.combineRGBData(
+        rgbData.data,
+        overlayData.data,
+        blendMode,
+      )
       const { relativeId, layer } = this.currentActSelection
       const quad = layer.activations[relativeId]
       quad.update(grayscaleData)
     }
   }
 
-  private combineRGBData(a: Uint8ClampedArray, b: Uint8ClampedArray) {
+  private combineRGBData(
+    a: Uint8ClampedArray,
+    b: Uint8ClampedArray,
+    blendMode: string,
+  ) {
+    const bOff = blendMode === 'alpha' ? 3 : 0
     const grayscale = a.reduce((acc, c, i) => {
       if (i % 4 === 0) {
-        b[i] > 0 ? acc.push(b[i] / 255) : acc.push(c / 255)
+        const overlayCol = b[i + bOff] / 255
+        const origCol = c / 255
+        overlayCol > 0 ? acc.push(overlayCol + origCol) : acc.push(origCol)
       }
       return acc
     }, [])
@@ -341,32 +352,19 @@ export default class Editor {
     })
   }
 
-  private combineFloatWithRGBData(a: Float32Array, b: Uint8ClampedArray) {
-    const grayscale = b.reduce((acc, c, i) => {
-      if (i % 4 === 0) {
-        const blend = 1 - (1 - c / 255) * (1 - a[i / 4])
-        acc.push(blend)
-      }
-      return acc
-    }, [])
+  private combineFloatWithRGBData(
+    a: Float32Array,
+    b: Uint8ClampedArray,
+    blendMode: string,
+  ) {
+    const bOff = blendMode === 'alpha' ? 3 : 0
+    const grayscale = a.map((c, i) => {
+      const overlayAlpha = b[i * 4 + bOff] / 255
+      return overlayAlpha > 0 ? overlayAlpha + c : c
+    })
+
     return new Float32Array(grayscale)
   }
-
-  /* private generateCtxsForLayer() {
-    const { activations, shape } =
-      this.currentActSelection.layerInfo.layer
-    const [w, h] = shape.slice(2)
-    const ctxs = activations.map((data: Float32Array) => {
-      const canvas = new OffscreenCanvas(w, h)
-      const ctx = canvas.getContext('2d')
-      const imageData = new ImageData(w, h)
-      this.act2RGB(imageData, data)
-      ctx.putImageData(imageData, 0, 0)
-
-      return { data, ctx }
-    })
-    return ctxs
-  } */
 
   public remakeActivation() {
     const { layer } = this.currentActSelection

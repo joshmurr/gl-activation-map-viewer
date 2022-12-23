@@ -11,7 +11,6 @@ import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import './styles.scss'
 import { findLayer } from './utils'
-import Quad from './Quad'
 
 const G = new GL_Handler()
 const canvas = G.canvas(1024, 512)
