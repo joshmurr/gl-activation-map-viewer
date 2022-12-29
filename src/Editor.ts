@@ -15,6 +15,7 @@ export default class Editor {
   private _applyToAll = false
   private currentActSelection: ActivationSelection
   private _brushSize = 3
+  private rotationCounter = 1
 
   constructor() {
     this.buildContainer()
@@ -61,7 +62,7 @@ export default class Editor {
         text: 'Rect',
         parent: this.tools,
         id: null,
-        callback: () => this.fillRect('white', [8, 8]),
+        callback: () => this.fillRect('grey', [8, 8]),
       },
       {
         text: 'Rotate',
@@ -131,6 +132,7 @@ export default class Editor {
   }
 
   public show(currentAct: ActivationSelection) {
+    this.rotationCounter = 1
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = layer.shape.slice(2)
@@ -249,6 +251,8 @@ export default class Editor {
     }
     document.removeEventListener('keydown', this.handleKeyDown)
     document.removeEventListener('keyup', this.handleKeyUp)
+
+    this.updateActivation()
   }
 
   public get needsUpdate(): boolean {
@@ -277,7 +281,7 @@ export default class Editor {
     const y = Math.floor((event.clientY - rect.top) / scale)
 
     this.brush(x, y, this._brushSize)
-    this.updateActivation('alpha')
+    /* this.updateActivation('alpha') */
   }
 
   private brush(x: number, y: number, size: number) {
@@ -311,45 +315,15 @@ export default class Editor {
         quad.update(grayscaleData)
       })
     } else {
-      const rgbData = this.ctx.getImageData(
-        0,
-        0,
-        this.canvas.width,
-        this.canvas.height,
-      )
-
-      const grayscaleData = this.combineRGBData(
-        rgbData.data,
+      const { relativeId, layer } = this.currentActSelection
+      const quad = layer.activations[relativeId]
+      const grayscaleData = this.combineFloatWithRGBData(
+        quad.data,
         overlayData.data,
         blendMode,
       )
-      const { relativeId, layer } = this.currentActSelection
-      const quad = layer.activations[relativeId]
       quad.update(grayscaleData)
     }
-  }
-
-  private combineRGBData(
-    a: Uint8ClampedArray,
-    b: Uint8ClampedArray,
-    blendMode: string,
-  ) {
-    const bOff = blendMode === 'alpha' ? 3 : 0
-    const grayscale = a.reduce((acc, c, i) => {
-      if (i % 4 === 0) {
-        const overlayCol = b[i + bOff] / 255
-        const origCol = c / 255
-        overlayCol > 0 ? acc.push(overlayCol + origCol) : acc.push(origCol)
-      }
-      return acc
-    }, [])
-    return new Float32Array(grayscale)
-  }
-
-  private combineFloatData(a: Float32Array, b: Float32Array) {
-    return a.map((c, i) => {
-      return b[i] > 0 ? b[i] : c
-    })
   }
 
   private combineFloatWithRGBData(
@@ -360,7 +334,11 @@ export default class Editor {
     const bOff = blendMode === 'alpha' ? 3 : 0
     const grayscale = a.map((c, i) => {
       const overlayAlpha = b[i * 4 + bOff] / 255
-      return overlayAlpha > 0 ? overlayAlpha + c : c
+      return blendMode === 'alpha'
+        ? overlayAlpha > 0
+          ? overlayAlpha + c
+          : c
+        : overlayAlpha
     })
 
     return new Float32Array(grayscale)
@@ -384,12 +362,12 @@ export default class Editor {
     const fillColour = this.text2Colour(colour)
     const newImageData = new ImageData(...size)
     newImageData.data.fill(fillColour)
-    const newData = newImageData.data.map((c, i) => (i % 4 === 3 ? 255 : c))
+    const newData = newImageData.data.map((c, i) => (i % 4 === 3 ? c : 255))
     const x_off = Math.floor((width - size[0]) / 2)
     const y_off = Math.floor((height - size[1]) / 2)
     newImageData.data.set(newData, 0)
     this.oCtx.putImageData(newImageData, x_off, y_off)
-    this.updateActivation()
+    /* this.updateActivation() */
   }
 
   private fill(colour: string) {
@@ -402,18 +380,57 @@ export default class Editor {
     )
     imageData.data.set(newData, 0)
     this.oCtx.putImageData(imageData, 0, 0)
-    this.updateActivation()
+    /* this.updateActivation() */
+  }
+
+  private xy2contig = (x: number, y: number, width: number) =>
+    (x + width * y) * 4
+  private pixel = (
+    array: Uint8ClampedArray,
+    x: number,
+    y: number,
+    width: number,
+  ) => {
+    const idx = this.xy2contig(x, y, width)
+    return array.slice(idx, idx + 4)
   }
 
   private rotate() {
     const { width, height } = this.canvas
-    //const imageData = this.ctx.getImageData(0, 0, width, height)
-    this.ctx.save()
-    this.ctx.translate(width / 2, height / 2)
-    this.ctx.rotate((90 * Math.PI) / 180)
-    this.ctx.drawImage(this.canvas, -width / 2, -height / 2)
-    this.ctx.restore()
-    this.updateActivation()
+    const imageData = this.ctx.getImageData(0, 0, width, height)
+
+    const cos = Math.cos
+    const sin = Math.sin
+    const angle = (Math.PI / 2) * this.rotationCounter++
+    const center_x = (width - 1) / 2
+    const center_y = (height - 1) / 2
+
+    const newData = new Uint8ClampedArray(imageData.data).fill(0)
+
+    for (let i = 0; i < newData.length; i += 4) {
+      const index = Math.floor(i / 4)
+      const x = index % width
+      const y = (index - x) / width
+
+      const xp = Math.round(
+        (x - center_x) * cos(angle) - (y - center_y) * sin(angle) + center_x,
+      )
+      const yp = Math.round(
+        (x - center_x) * sin(angle) + (y - center_y) * cos(angle) + center_y,
+      )
+
+      const data = this.pixel(imageData.data, x, y, width)
+
+      //const oldIdx = xy2contig(x, y, width)
+      const newIdx = this.xy2contig(xp, yp, width)
+      if (newIdx < newData.length && newIdx >= 0) newData.set(data, newIdx)
+    }
+
+    const ctbID = new ImageData(width, height)
+    ctbID.data.set(newData, 0)
+    this.oCtx.putImageData(ctbID, 0, 0)
+
+    /* this.updateActivation('notAlpha') */
   }
 
   private screenScale(w: number) {
@@ -438,4 +455,27 @@ export default class Editor {
   public set brushSize(val: number) {
     this._brushSize = val
   }
+
+  /* private combineRGBData(
+    a: Uint8ClampedArray,
+    b: Uint8ClampedArray,
+    blendMode: string,
+  ) {
+    const bOff = blendMode === 'alpha' ? 3 : 0
+    const grayscale = a.reduce((acc, c, i) => {
+      if (i % 4 === 0) {
+        const overlayCol = b[i + bOff] / 255
+        const origCol = c / 255
+        overlayCol > 0 ? acc.push(overlayCol + origCol) : acc.push(origCol)
+      }
+      return acc
+    }, [])
+    return new Float32Array(grayscale)
+  }
+
+  private combineFloatData(a: Float32Array, b: Float32Array) {
+    return a.map((c, i) => {
+      return b[i] > 0 ? b[i] : c
+    })
+  } */
 }
