@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs'
 import { ActivationSelection } from './types'
 
-import { rotate } from './transformations'
+import { rotateImageData } from './transformations'
 
 export default class Editor {
   private editor: HTMLElement
@@ -172,16 +172,6 @@ export default class Editor {
       }
     }
   }
-
-  /* private rgb2grayscale(data: ImageData) {
-    const grayscale = data.data.reduce((acc, p, i) => {
-      if (i % 4 === 0) {
-        acc.push(p / 255)
-      }
-      return acc
-    }, [])
-    return new Float32Array(grayscale)
-  } */
 
   private addButton(
     text: string,
@@ -385,27 +375,12 @@ export default class Editor {
     /* this.updateActivation() */
   }
 
-  private xy2contig = (x: number, y: number, width: number) =>
-    (x + width * y) * 4
-
-  private pixel = (
-    array: Uint8ClampedArray,
-    x: number,
-    y: number,
-    width: number,
-  ) => {
-    const idx = this.xy2contig(x, y, width)
-    return array.slice(idx, idx + 4)
-  }
-
   private rotate() {
     const { width, height } = this.canvas
     const imageData = this.ctx.getImageData(0, 0, width, height)
 
-    const newData = rotate(rgb2grayscale(imageData.data), width, height)
-
-    const newImageData = new ImageData(width, height)
-    newImageData.data.set(newData, 0)
+    const angle = (Math.PI / 2) * this.rotationCounter++
+    const newImageData = rotateImageData(imageData, angle)
     this.oCtx.putImageData(newImageData, 0, 0)
 
     this.updateActivation('notAlpha')

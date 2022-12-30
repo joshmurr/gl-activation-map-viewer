@@ -11,12 +11,6 @@ export interface ModelInfo {
   animate_frame: number
 }
 
-/* export interface Quad {
-  quad: Quad
-  uid: number[]
-  uniforms: { [key: string]: any }
-} */
-
 export interface Button {
   selector: string
   eventListener: string
