@@ -1,6 +1,8 @@
 import * as tf from '@tensorflow/tfjs'
 import { ActivationSelection } from './types'
 
+import { rotate } from './transformations'
+
 export default class Editor {
   private editor: HTMLElement
   private activationsCont: HTMLElement
@@ -385,6 +387,7 @@ export default class Editor {
 
   private xy2contig = (x: number, y: number, width: number) =>
     (x + width * y) * 4
+
   private pixel = (
     array: Uint8ClampedArray,
     x: number,
@@ -399,38 +402,13 @@ export default class Editor {
     const { width, height } = this.canvas
     const imageData = this.ctx.getImageData(0, 0, width, height)
 
-    const cos = Math.cos
-    const sin = Math.sin
-    const angle = (Math.PI / 2) * this.rotationCounter++
-    const center_x = (width - 1) / 2
-    const center_y = (height - 1) / 2
+    const newData = rotate(rgb2grayscale(imageData.data), width, height)
 
-    const newData = new Uint8ClampedArray(imageData.data).fill(0)
+    const newImageData = new ImageData(width, height)
+    newImageData.data.set(newData, 0)
+    this.oCtx.putImageData(newImageData, 0, 0)
 
-    for (let i = 0; i < newData.length; i += 4) {
-      const index = Math.floor(i / 4)
-      const x = index % width
-      const y = (index - x) / width
-
-      const xp = Math.round(
-        (x - center_x) * cos(angle) - (y - center_y) * sin(angle) + center_x,
-      )
-      const yp = Math.round(
-        (x - center_x) * sin(angle) + (y - center_y) * cos(angle) + center_y,
-      )
-
-      const data = this.pixel(imageData.data, x, y, width)
-
-      //const oldIdx = xy2contig(x, y, width)
-      const newIdx = this.xy2contig(xp, yp, width)
-      if (newIdx < newData.length && newIdx >= 0) newData.set(data, newIdx)
-    }
-
-    const ctbID = new ImageData(width, height)
-    ctbID.data.set(newData, 0)
-    this.oCtx.putImageData(ctbID, 0, 0)
-
-    /* this.updateActivation('notAlpha') */
+    this.updateActivation('notAlpha')
   }
 
   private screenScale(w: number) {
