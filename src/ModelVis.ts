@@ -27,6 +27,7 @@ export default class ModelVis {
   }
 
   public update(z: tf.Tensor2D) {
+    this._tfLayers = this.model.getLayers()
     this.layerOutputs = this.model.getLayerOutputs(this._tfLayers, z)
   }
 
@@ -128,10 +129,6 @@ export default class ModelVis {
         imageData.data[ix + 3] = 255
       }
     }
-  }
-
-  get activations() {
-    return null
   }
 
   get __layers() {

@@ -52,7 +52,8 @@ body {
   #tools {
     margin: 3px;
     position: relative;
-    display: inline-block;
+    display: block;
+    /* padding-top: 100px; */
     span {
       margin: 3px;
       padding: 3px 6px;

@@ -73,7 +73,7 @@ export default class Editor {
         callback: () => this.rotate(),
       },
       {
-        text: 'All',
+        text: 'Apply to Stack',
         parent: this.tools,
         id: 'all',
         callback: () => this.toggleApplyToAll(),
@@ -147,6 +147,13 @@ export default class Editor {
     this.overlay.height = h
     this.overlay.style.width = `${w * this.screenScale(w)}px`
     this.overlay.style.height = `${h * this.screenScale(w)}px`
+
+    document.querySelector('.canvasCont').style.width = `${
+      w * this.screenScale(w)
+    }px`
+    document.querySelector('.canvasCont').style.height = `${
+      h * this.screenScale(w)
+    }px`
 
     const imageData = new ImageData(w, h)
     const { data } = layer.activations[relativeId]
