@@ -59,13 +59,17 @@ const currentActSelection: ActivationSelection = {
 const debug = new Debug()
 debug.addField('ID', () => oldPickNdx.toString())
 
+const modelUrl =
+  process.env.NODE_ENV === 'development'
+    ? './model/model.json'
+    : 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json'
+
 async function init() {
   // MODEL ------------------------------
   const modelInfo: { [key: string]: ModelInfo } = {
     dcgan64: {
       description: 'DCGAN, 64x64 (16 MB)',
-      /* url: 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json', */
-      url: './model/model.json',
+      url: modelUrl,
       size: 64,
       latent_dim: 128,
       draw_multiplier: 4,

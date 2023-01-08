@@ -5,7 +5,7 @@
   "main": "webpack.config.js",
   "scripts": {
     "build": "webpack",
-    "serve": "webpack serve"
+    "serve": "NODE_ENV=development webpack serve"
   },
   "keywords": [],
   "author": "",

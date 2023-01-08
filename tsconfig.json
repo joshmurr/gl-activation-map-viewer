@@ -12,5 +12,10 @@
     "allowJs": true,
     "skipLibCheck": true
   },
-  "exclude": ["spec", "./**/node_modules", "./node_modules"]
+  "exclude": [
+    "spec",
+    "./**/node_modules",
+    "./node_modules",
+    "./webpack.config.js"
+  ]
 }

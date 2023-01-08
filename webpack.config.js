@@ -3,9 +3,9 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
-  mode: 'development',
+  mode: process.env.NODE_ENV !== 'development' ? 'production' : 'development',
   entry: {
-    embedded: './src/index.ts',
+    activations: './src/index.ts',
   },
   devtool: 'inline-source-map',
   devServer: {
@@ -40,7 +40,7 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: 'Embedded',
+      title: 'Activation Map Editor',
       template: './index.html',
     }),
     new CopyWebpackPlugin({
