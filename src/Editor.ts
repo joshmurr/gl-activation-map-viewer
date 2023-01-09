@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs'
-import { ActivationSelection } from './types'
+import { ActivationSelection, LayerInfo } from './types'
 
 import { rotateImageData } from './transformations'
 
@@ -343,8 +343,7 @@ export default class Editor {
     return new Float32Array(grayscale)
   }
 
-  public remakeActivation() {
-    const { layer } = this.currentActSelection
+  public remakeActivation(layer: LayerInfo) {
     const { activations } = layer
     const [w, h] = layer.shape.slice(2)
     const layerTensors = activations.map((quad) => {

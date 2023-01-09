@@ -98,13 +98,19 @@ async function init() {
     __layers = await vis.getActivations(G, program)
     gen.displayOut(logits, gui.output.base)
   }
-  const predict = async () => {
-    const { act } = editor.remakeActivation()
-    const { layerName } = currentActSelection
 
+  const predict = async () => {
     const layers = vis.tfLayers
-    const idx = layers.indexOf(layers.find((l) => l.name === layerName)) + 1
+    const layer = currentActSelection.layer
+      ? currentActSelection.layer
+      : __layers[0]
+
+    const { name } = layer
+
+    const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
     const sliced = layers.slice(idx)
+
+    const { act } = editor.remakeActivation(layer)
 
     const activations = gen.runLayersGen(sliced, act, idx)
     let logits = null
@@ -132,14 +138,10 @@ async function init() {
   gui.initButtons(buttons)
   /* GUI END */
 
-  /* EDITOR */
   const editor = new Editor()
-  /* EDITOR END */
 
-  console.log(__layers)
   function draw(time: number) {
     // PICKING ----------------------
-
     gl.useProgram(pickProgram)
     gl.clearColor(0.9, 0.9, 0.9, 1)
     gl.bindFramebuffer(gl.FRAMEBUFFER, pickingFbo)
