@@ -72,3 +72,7 @@ export interface ActivationSelection {
   layerName: string
   layer: LayerInfo
 }
+
+export type RectCoords = [number, number, number, number]
+
+export type FillFn = (c: number, i?: number) => number

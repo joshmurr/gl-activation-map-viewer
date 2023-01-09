@@ -1,15 +1,15 @@
 import * as tf from '@tensorflow/tfjs'
-import { ActivationSelection } from './types'
+import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
 
-import { rotateImageData } from './transformations'
+import { fill, rect, rotate } from './transformations'
+import { act2ImageData } from './conversions'
+import { TypedArray } from './typedArrays'
 
 export default class Editor {
   private editor: HTMLElement
   private activationsCont: HTMLElement
   private canvas: HTMLCanvasElement
-  private overlay: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
-  private oCtx: CanvasRenderingContext2D
   private tools: HTMLElement
   private SHIFT = false
   /* private SCALE = 25 */
@@ -64,7 +64,7 @@ export default class Editor {
         text: 'Rect',
         parent: this.tools,
         id: null,
-        callback: () => this.fillRect('grey', [8, 8]),
+        callback: () => this.autoFillRect('grey'),
       },
       {
         text: 'Rotate',
@@ -123,11 +123,7 @@ export default class Editor {
     this.canvas = document.createElement('canvas')
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
-    this.overlay = document.createElement('canvas')
-    this.oCtx = this.overlay.getContext('2d', { willReadFrequently: true })
-
     canvasCont.appendChild(this.canvas)
-    canvasCont.appendChild(this.overlay)
     this.editor.appendChild(canvasCont)
     this.editor.appendChild(this.tools)
     document.body.appendChild(this.editor)
@@ -143,41 +139,15 @@ export default class Editor {
     this.canvas.style.width = `${w * this.screenScale(w)}px`
     this.canvas.style.height = `${h * this.screenScale(w)}px`
 
-    this.overlay.width = w
-    this.overlay.height = h
-    this.overlay.style.width = `${w * this.screenScale(w)}px`
-    this.overlay.style.height = `${h * this.screenScale(w)}px`
+    const canvasContainer = document.querySelector('.canvasCont') as HTMLElement
+    canvasContainer.style.width = `${w * this.screenScale(w)}px`
+    canvasContainer.style.height = `${h * this.screenScale(w)}px`
 
-    document.querySelector('.canvasCont').style.width = `${
-      w * this.screenScale(w)
-    }px`
-    document.querySelector('.canvasCont').style.height = `${
-      h * this.screenScale(w)
-    }px`
-
-    const imageData = new ImageData(w, h)
     const { data } = layer.activations[relativeId]
-    this.act2RGB(imageData, data)
+    const imageData = act2ImageData(data, w, h)
 
     this.ctx.putImageData(imageData, 0, 0)
     this.showDisplay()
-  }
-
-  private act2RGB(
-    imageData: ImageData,
-    data: Float32Array | Int32Array | Uint8Array,
-  ) {
-    const { width: w, height: h } = imageData
-    for (let x = 0; x < w; x++) {
-      for (let y = 0; y < h; y++) {
-        const ix = (y * w + x) * 4
-        const iv = y * w + x
-        imageData.data[ix + 0] = Math.floor(255 * data[iv])
-        imageData.data[ix + 1] = Math.floor(255 * data[iv])
-        imageData.data[ix + 2] = Math.floor(255 * data[iv])
-        imageData.data[ix + 3] = 255
-      }
-    }
   }
 
   private addButton(
@@ -230,7 +200,7 @@ export default class Editor {
   private showDisplay() {
     this.editor.classList.remove('hide')
     this.editor.classList.add('show')
-    this.overlay.addEventListener('click', (e) => {
+    this.canvas.addEventListener('click', (e) => {
       this.draw(e)
     })
 
@@ -250,8 +220,6 @@ export default class Editor {
     }
     document.removeEventListener('keydown', this.handleKeyDown)
     document.removeEventListener('keyup', this.handleKeyUp)
-
-    this.updateActivation()
   }
 
   public get needsUpdate(): boolean {
@@ -273,78 +241,57 @@ export default class Editor {
   }
 
   private draw(event: MouseEvent) {
-    const rect = this.overlay.getBoundingClientRect()
-    const { width } = this.overlay
+    const canvasRect = this.canvas.getBoundingClientRect()
+    const { width } = this.canvas
     const scale = this.screenScale(width)
-    const x = Math.floor((event.clientX - rect.left) / scale)
-    const y = Math.floor((event.clientY - rect.top) / scale)
+    const x1 = Math.floor((event.clientX - canvasRect.left) / scale)
+    const y1 = Math.floor((event.clientY - canvasRect.top) / scale)
 
-    this.brush(x, y, this._brushSize)
-    /* this.updateActivation('alpha') */
+    const x2 = x1 + this._brushSize
+    const y2 = y1 + this._brushSize
+
+    const coords: RectCoords = [x1, y1, x2, y2]
+
+    const fillFn = (c: number, i: number) => {
+      const out = this.SHIFT ? c - 0.1 : c + 0.1
+      return out
+    }
+
+    this.applyRect(coords, fillFn)
   }
 
   private brush(x: number, y: number, size: number) {
     const offset = Math.floor(size / 2)
 
-    const p = this.oCtx.getImageData(x - offset, y - offset, size, size)
+    const p = this.ctx.getImageData(x - offset, y - offset, size, size)
     const adder = this.SHIFT ? 10 : -10
 
     const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? c + adder : 255))
     const newImageData = new ImageData(newData, size, size)
 
-    this.oCtx.putImageData(newImageData, x - offset, y - offset)
+    this.ctx.putImageData(newImageData, x - offset, y - offset)
   }
 
-  private updateActivation(blendMode = 'alpha') {
+  private updateActivation(
+    newData: Float32Array,
+    transformation: (...args: unknown[]) => TypedArray,
+  ) {
     if (!this.currentActSelection) return
-    const overlayData = this.oCtx.getImageData(
-      0,
-      0,
-      this.overlay.width,
-      this.overlay.height,
-    )
+    const { width, height } = this.canvas
 
     if (this._applyToAll) {
       this.currentActSelection.layer.activations.forEach((quad) => {
-        const grayscaleData = this.combineFloatWithRGBData(
-          quad.data,
-          overlayData.data,
-          blendMode,
-        )
-        quad.update(grayscaleData)
+        const newData = transformation(quad.data, width, height) as Float32Array
+        quad.update(newData)
       })
     } else {
       const { relativeId, layer } = this.currentActSelection
       const quad = layer.activations[relativeId]
-      const grayscaleData = this.combineFloatWithRGBData(
-        quad.data,
-        overlayData.data,
-        blendMode,
-      )
-      quad.update(grayscaleData)
+      quad.update(newData)
     }
   }
 
-  private combineFloatWithRGBData(
-    a: Float32Array,
-    b: Uint8ClampedArray,
-    blendMode: string,
-  ) {
-    const bOff = blendMode === 'alpha' ? 3 : 0
-    const grayscale = a.map((c, i) => {
-      const overlayAlpha = b[i * 4 + bOff] / 255
-      return blendMode === 'alpha'
-        ? overlayAlpha > 0
-          ? overlayAlpha + c
-          : c
-        : overlayAlpha
-    })
-
-    return new Float32Array(grayscale)
-  }
-
-  public remakeActivation() {
-    const { layer } = this.currentActSelection
+  public remakeActivation(layer: LayerInfo) {
     const { activations } = layer
     const [w, h] = layer.shape.slice(2)
     const layerTensors = activations.map((quad) => {
@@ -356,41 +303,68 @@ export default class Editor {
     return { layer, act }
   }
 
-  private fillRect(colour: string, size: [number, number]) {
-    const { width, height } = this.overlay
-    const fillColour = this.text2Colour(colour)
-    const newImageData = new ImageData(...size)
-    newImageData.data.fill(fillColour)
-    const newData = newImageData.data.map((c, i) => (i % 4 === 3 ? c : 255))
-    const x_off = Math.floor((width - size[0]) / 2)
-    const y_off = Math.floor((height - size[1]) / 2)
-    newImageData.data.set(newData, 0)
-    this.oCtx.putImageData(newImageData, x_off, y_off)
-    /* this.updateActivation() */
+  private autoFillRect(colour: string) {
+    const { width, height } = this.canvas
+
+    const rw = Math.floor(width * 0.6)
+    const x1 = Math.floor((width - rw) / 2)
+    const y1 = Math.floor((height - rw) / 2)
+    const x2 = Math.floor(x1 + rw)
+    const y2 = Math.floor(y1 + rw)
+
+    this.fillRect(colour, [x1, y1, x2, y2])
+  }
+
+  private fillRect(colour: string, coords: RectCoords) {
+    const fillColour = this.text2Colour(colour) / 255
+    const fillFn = (_: number) => fillColour
+    this.applyRect(coords, fillFn)
+  }
+
+  private applyRect(coords: RectCoords, fillFn: FillFn) {
+    const { width, height } = this.canvas
+    const { relativeId, layer } = this.currentActSelection
+    const { data } = layer.activations[relativeId]
+    const newData = rect(data, width, coords, fillFn)
+
+    const imageData = act2ImageData(newData, width, height)
+    this.ctx.putImageData(imageData, 0, 0)
+
+    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
+      rect(_d, width, coords, fillFn)
+
+    this.updateActivation(newData, transformationFn)
   }
 
   private fill(colour: string) {
     const { width, height } = this.canvas
-    const imageData = new ImageData(width, height)
-    const fillColour = this.text2Colour(colour)
-    const newData = imageData.data.map((_, i) =>
-      /* Full alpha */
-      (i + 1) % 4 === 0 ? 255 : fillColour,
-    )
-    imageData.data.set(newData, 0)
-    this.oCtx.putImageData(imageData, 0, 0)
-    /* this.updateActivation() */
+    const { relativeId, layer } = this.currentActSelection
+    const { data } = layer.activations[relativeId]
+    const fillColour = this.text2Colour(colour) / 255
+    const newData = fill(data, fillColour) /* true: same ref */
+    const imageData = act2ImageData(newData, width, height)
+    this.ctx.putImageData(imageData, 0, 0)
+
+    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
+      fill(_d, fillColour)
+
+    this.updateActivation(newData, transformationFn)
   }
 
   private rotate() {
     const { width, height } = this.canvas
-    const imageData = this.ctx.getImageData(0, 0, width, height)
+    const { relativeId, layer } = this.currentActSelection
+    const { data } = layer.activations[relativeId]
 
     const angle = (Math.PI / 2) * this.rotationCounter++
-    const newImageData = rotateImageData(imageData, angle)
-    this.oCtx.putImageData(newImageData, 0, 0)
+    const newData = rotate(data, width, height, angle)
+    const imageData = act2ImageData(newData, width, height)
+    this.ctx.putImageData(imageData, 0, 0)
 
-    this.updateActivation('notAlpha')
+    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
+      rotate(_d, _w, _h, angle)
+
+    this.updateActivation(newData, transformationFn)
   }
 
   private screenScale(w: number) {
