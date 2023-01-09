@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs'
-import { ActivationSelection, LayerInfo, RectCoords } from './types'
+import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
 
-import { fill, fillRect, rotate } from './transformations'
+import { fill, rect, rotate } from './transformations'
 import { act2ImageData } from './conversions'
 import { TypedArray } from './typedArrays'
 
@@ -64,7 +64,7 @@ export default class Editor {
         text: 'Rect',
         parent: this.tools,
         id: null,
-        callback: () => this.fillRect('grey'),
+        callback: () => this.autoFillRect('grey'),
       },
       {
         text: 'Rotate',
@@ -241,14 +241,23 @@ export default class Editor {
   }
 
   private draw(event: MouseEvent) {
-    const rect = this.canvas.getBoundingClientRect()
+    const canvasRect = this.canvas.getBoundingClientRect()
     const { width } = this.canvas
     const scale = this.screenScale(width)
-    const x = Math.floor((event.clientX - rect.left) / scale)
-    const y = Math.floor((event.clientY - rect.top) / scale)
+    const x1 = Math.floor((event.clientX - canvasRect.left) / scale)
+    const y1 = Math.floor((event.clientY - canvasRect.top) / scale)
 
-    this.brush(x, y, this._brushSize)
-    /* this.updateActivation('alpha') */
+    const x2 = x1 + this._brushSize
+    const y2 = y1 + this._brushSize
+
+    const coords: RectCoords = [x1, y1, x2, y2]
+
+    const fillFn = (c: number, i: number) => {
+      const out = this.SHIFT ? c - 0.1 : c + 0.1
+      return out
+    }
+
+    this.applyRect(coords, fillFn)
   }
 
   private brush(x: number, y: number, size: number) {
@@ -294,11 +303,8 @@ export default class Editor {
     return { layer, act }
   }
 
-  private fillRect(colour: string) {
+  private autoFillRect(colour: string) {
     const { width, height } = this.canvas
-    const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-    const fillColour = this.text2Colour(colour) / 255
 
     const rw = Math.floor(width * 0.6)
     const x1 = Math.floor((width - rw) / 2)
@@ -306,14 +312,26 @@ export default class Editor {
     const x2 = Math.floor(x1 + rw)
     const y2 = Math.floor(y1 + rw)
 
-    const coords: RectCoords = [x1, y1, x2, y2]
-    const newData = fillRect(data, width, coords, fillColour)
+    this.fillRect(colour, [x1, y1, x2, y2])
+  }
+
+  private fillRect(colour: string, coords: RectCoords) {
+    const fillColour = this.text2Colour(colour) / 255
+    const fillFn = (_: number) => fillColour
+    this.applyRect(coords, fillFn)
+  }
+
+  private applyRect(coords: RectCoords, fillFn: FillFn) {
+    const { width, height } = this.canvas
+    const { relativeId, layer } = this.currentActSelection
+    const { data } = layer.activations[relativeId]
+    const newData = rect(data, width, coords, fillFn)
 
     const imageData = act2ImageData(newData, width, height)
     this.ctx.putImageData(imageData, 0, 0)
 
     const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      fillRect(_d, width, coords, fillColour)
+      rect(_d, width, coords, fillFn)
 
     this.updateActivation(newData, transformationFn)
   }

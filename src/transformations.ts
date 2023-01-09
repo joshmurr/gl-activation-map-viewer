@@ -1,6 +1,5 @@
-import { convert, rgba2r } from './conversions'
 import { TypedArray } from './typedArrays'
-import { RectCoords } from './types'
+import { FillFn, RectCoords } from './types'
 
 const cos = Math.cos
 const sin = Math.sin
@@ -78,20 +77,20 @@ export const fill = (input: Float32Array, color: number): Float32Array => {
   return input.fill(color)
 }
 
-export const fillRect = (
+export const rect = (
   input: Float32Array,
   imageWidth: number,
   coords: RectCoords,
-  colour: number,
+  fillFn: FillFn,
 ): Float32Array => {
   const [x1, y1, x2, y2] = coords
   const width = x2 - x1
 
   for (let y = y1; y < y2; y += 1) {
     const data = sliceRow(input, x1, y, width, 1)
-    data.fill(colour)
+    const newData = new Float32Array(data.map(fillFn))
     const idx = xy2contig(x1, y, imageWidth, 1)
-    input.set(data, idx)
+    input.set(newData, idx)
   }
 
   return input

@@ -34,9 +34,6 @@ export default class Quad {
   }
 
   public update(data: Float32Array) {
-    /* Calls the update func passed to the quad.
-     * See the setter below.
-     */
     this._data.set(data, 0)
     this._updateSelf(this._uniforms.u_texture, this._data)
   }
@@ -72,7 +69,7 @@ export default class Quad {
 
   public set updateFunc(func: (...args: any[]) => void) {
     /* Takes a decorated function to handle the visual update.
-     * Nameley updated the texture..
+     * Nameley updating the texture..
      */
     this._updateSelf = func
   }
