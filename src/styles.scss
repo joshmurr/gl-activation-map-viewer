@@ -13,8 +13,44 @@ body {
   font-family: Arial;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  width: 100%;
+  text-align: center;
+}
+
+#container {
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr min(65ch, 100%) 1fr;
+
+  & > * {
+    display: block;
+    grid-column: 2;
+  }
+}
+
+.full-bleed {
+  width: 100%;
+  grid-column: 1 / -1 !important;
+  margin: 1em 0;
+}
+
+#model-vis-container {
+  canvas {
+    width: 100%;
+  }
+}
+
 .sidebar {
-  .model-output {
+  &__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     canvas {
       width: 128px;
       height: 128px;
@@ -24,6 +60,7 @@ body {
     }
   }
 }
+
 #editor {
   position: absolute;
   top: 15px;
@@ -74,11 +111,11 @@ body {
 }
 
 #buttons {
-  grid-area: header;
   width: 100%;
   height: 2em;
   display: flex;
   justify-content: center;
+  gap: 0.5em;
 }
 
 .hide {

@@ -8,15 +8,20 @@ export default class GUI {
   private checkboxes: { [key: string]: HTMLInputElement }
   private _sliders: { [key: string]: HTMLInputElement }
 
-  constructor() {
+  constructor(sidebarEl: HTMLElement) {
     this.container = document.getElementById('container')
     this.display = document.createElement('div')
     this.display.classList.add('display')
-    this.sidebar = document.createElement('div')
+    this.sidebar = sidebarEl
+
+    if (!this.sidebar) {
+      this.sidebar = document.createElement('div')
+      this.container.appendChild(this.sidebar)
+    }
+
     this.sidebar.classList.add('sidebar')
 
     this.container.appendChild(this.display)
-    this.container.appendChild(this.sidebar)
 
     this.outputSurfaces = {}
     this.checkboxes = {}
@@ -61,16 +66,18 @@ export default class GUI {
     })
   }
 
-  public initImageOutput(ref: string) {
+  public initImageOutput(ref: string, canvasEl?: HTMLCanvasElement) {
     const outputContainer = document.createElement('div')
     outputContainer.classList.add('model-output')
 
-    const canvas = document.createElement('canvas')
+    let canvas = canvasEl
+    if (!canvas) {
+      canvas = document.createElement('canvas')
+      outputContainer.appendChild(canvas)
+      this.sidebar.appendChild(outputContainer)
+    }
 
     this.outputSurfaces[ref] = canvas
-
-    outputContainer.appendChild(canvas)
-    this.sidebar.appendChild(outputContainer)
   }
 
   public get output() {
