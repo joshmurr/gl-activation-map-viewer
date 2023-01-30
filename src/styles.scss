@@ -74,9 +74,11 @@ h6 {
 
   #close {
     position: absolute;
-    top: 15px;
-    right: 15px;
+    bottom: 20px;
+    right: 20px;
     background-color: rgb(255, 205, 205);
+    padding: 1rem 1.4rem;
+    font-weight: bold;
   }
 
   #close:not(:disabled):hover,
@@ -84,21 +86,29 @@ h6 {
     background: rgb(255, 190, 180);
   }
 
-  .canvasCont {
-    position: relative;
-    display: block;
-    margin: 45px 15px 15px 15px;
+  .editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
 
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      image-rendering: crisp-edges; /* for firefox */
-      image-rendering: pixelated; /* for everything else */
-    }
+    .canvas-cont {
+      position: relative;
+      display: block;
 
-    canvas:first-child {
-      filter: drop-shadow(0.1rem 0.1rem 0.15rem black);
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        image-rendering: crisp-edges; /* for firefox */
+        image-rendering: pixelated; /* for everything else */
+      }
+
+      canvas:first-child {
+        filter: drop-shadow(0.1rem 0.1rem 0.15rem black);
+      }
     }
   }
 
@@ -135,7 +145,19 @@ h6 {
   justify-content: center;
   position: relative;
   gap: 3px;
+  width: 80%;
+  flex-wrap: wrap;
   /* padding-top: 100px; */
+  .slider-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .text-container {
+      display: inline-block;
+    }
+  }
 }
 
 #activations {

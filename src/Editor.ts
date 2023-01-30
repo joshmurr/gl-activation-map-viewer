@@ -20,7 +20,6 @@ export default class Editor {
   private tools: HTMLElement
   private tooltipCont: HTMLElement
   private SHIFT = false
-  /* private SCALE = 25 */
   private _needsUpdate = false
   private _applyToAll = false
   private currentActSelection: ActivationSelection
@@ -38,6 +37,8 @@ export default class Editor {
   private buildContainer() {
     this.editor = document.createElement('div')
     this.editor.id = 'editor'
+    const editorWrapper = document.createElement('div')
+    editorWrapper.classList.add('editor-wrapper')
 
     this.hideDisplay()
 
@@ -119,12 +120,14 @@ export default class Editor {
         max: 12,
         step: 1,
         value: 6,
+        outputId: 'brush-size',
         callback: () => {
           const el = document.querySelector(
             'input[name="brush"]',
           ) as HTMLInputElement
           const val = el.value
           this.brushSize = Number(val)
+          document.getElementById('brush-size').innerText = val
         },
         parent: this.tools,
       },
@@ -136,12 +139,14 @@ export default class Editor {
         max: 2,
         step: 0.1,
         value: 1,
+        outputId: 'scale-factor',
         callback: () => {
           const el = document.querySelector(
             'input[name="scale"]',
           ) as HTMLInputElement
           const val = el.value
           this.scaleFactor = Number(val)
+          document.getElementById('scale-factor').innerText = val
         },
         parent: this.tools,
       },
@@ -158,6 +163,7 @@ export default class Editor {
         step,
         value,
         label,
+        outputId,
       }) =>
         this.addSlider(
           name,
@@ -169,6 +175,7 @@ export default class Editor {
           step,
           value,
           label,
+          outputId,
         ),
     )
 
@@ -176,7 +183,7 @@ export default class Editor {
     this.tooltipCont.classList.add('tooltip', 'hide')
 
     const canvasCont = document.createElement('div')
-    canvasCont.classList.add('canvasCont')
+    canvasCont.classList.add('canvas-cont')
 
     this.canvas = document.createElement('canvas')
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
@@ -187,8 +194,12 @@ export default class Editor {
 
     canvasCont.appendChild(this.canvas)
     canvasCont.appendChild(this.overlayCanvas)
-    this.editor.appendChild(canvasCont)
-    this.editor.appendChild(this.tools)
+
+    editorWrapper.appendChild(canvasCont)
+    editorWrapper.appendChild(this.tools)
+
+    this.editor.appendChild(editorWrapper)
+
     document.body.appendChild(this.tooltipCont)
     document.body.appendChild(this.editor)
   }
@@ -202,7 +213,9 @@ export default class Editor {
     this.initCanvas(this.canvas, w, h)
     this.initCanvas(this.overlayCanvas, w, h, 10)
 
-    const canvasContainer = document.querySelector('.canvasCont') as HTMLElement
+    const canvasContainer = document.querySelector(
+      '.canvas-cont',
+    ) as HTMLElement
     canvasContainer.style.width = `${w * this.screenScale(w)}px`
     canvasContainer.style.height = `${h * this.screenScale(w)}px`
 
@@ -253,7 +266,11 @@ export default class Editor {
     step: number,
     value: number,
     label: string,
+    outputId: string,
   ) {
+    const container = document.createElement('div')
+    container.classList.add('slider-container')
+
     const sliderEl = document.createElement('input') as HTMLInputElement
     sliderEl.type = 'range'
     sliderEl.name = name
@@ -263,12 +280,24 @@ export default class Editor {
     sliderEl.step = step.toString()
     sliderEl.value = value.toString()
     sliderEl.addEventListener(eventListener, callback)
-    parent.appendChild(sliderEl)
+    container.appendChild(sliderEl)
+
+    const textContainer = document.createElement('div')
+    textContainer.classList.add('text-container')
 
     const labelEl = document.createElement('label')
     labelEl.htmlFor = name
-    labelEl.innerText = label
-    parent.appendChild(labelEl)
+    labelEl.innerText = label + ' '
+
+    const valOutput = document.createElement('span')
+    valOutput.innerText = value.toString()
+    valOutput.id = outputId
+
+    textContainer.appendChild(labelEl)
+    textContainer.appendChild(valOutput)
+
+    container.appendChild(textContainer)
+    parent.appendChild(container)
   }
 
   private handleKeyDown(e: KeyboardEvent) {
@@ -471,7 +500,7 @@ export default class Editor {
 
   private screenScale(w: number) {
     const maxLen = Math.min(window.innerHeight, window.innerWidth)
-    const targetSize = maxLen * 0.8
+    const targetSize = maxLen * 0.75
     const scale = targetSize / w
     return scale
   }
