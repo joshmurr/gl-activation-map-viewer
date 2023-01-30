@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs'
 import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
 
-import { fill, rect, rotate } from './transformations'
+import { fill, rect, rotate, scale } from './transformations'
 import { act2ImageData } from './conversions'
 import { TypedArray } from './typedArrays'
 
@@ -25,6 +25,7 @@ export default class Editor {
   private _applyToAll = false
   private currentActSelection: ActivationSelection
   private _brushSize = 3
+  private _scaleFactor = 1
   private rotationCounter = 1
 
   constructor() {
@@ -81,6 +82,12 @@ export default class Editor {
         callbacks: [['click', () => this.rotate()]],
       },
       {
+        text: 'Scale',
+        parent: this.tools,
+        id: null,
+        callbacks: [['click', () => this.scale()]],
+      },
+      {
         text: 'Apply to Stack',
         parent: this.tools,
         id: 'all',
@@ -110,6 +117,7 @@ export default class Editor {
         label: 'Brush Size',
         min: 1,
         max: 12,
+        step: 1,
         value: 6,
         callback: () => {
           const el = document.querySelector(
@@ -120,10 +128,37 @@ export default class Editor {
         },
         parent: this.tools,
       },
+      {
+        name: 'scale',
+        eventListener: 'change',
+        label: 'Scale Factor',
+        min: 0.5,
+        max: 2,
+        step: 0.1,
+        value: 1,
+        callback: () => {
+          const el = document.querySelector(
+            'input[name="scale"]',
+          ) as HTMLInputElement
+          const val = el.value
+          this.scaleFactor = Number(val)
+        },
+        parent: this.tools,
+      },
     ]
 
     sliders.forEach(
-      ({ name, parent, eventListener, callback, min, max, value, label }) =>
+      ({
+        name,
+        parent,
+        eventListener,
+        callback,
+        min,
+        max,
+        step,
+        value,
+        label,
+      }) =>
         this.addSlider(
           name,
           parent,
@@ -131,6 +166,7 @@ export default class Editor {
           callback,
           min,
           max,
+          step,
           value,
           label,
         ),
@@ -214,6 +250,7 @@ export default class Editor {
     callback: (e?: MouseEvent) => void,
     min: number,
     max: number,
+    step: number,
     value: number,
     label: string,
   ) {
@@ -223,6 +260,7 @@ export default class Editor {
     sliderEl.id = name
     sliderEl.min = min.toString()
     sliderEl.max = max.toString()
+    sliderEl.step = step.toString()
     sliderEl.value = value.toString()
     sliderEl.addEventListener(eventListener, callback)
     parent.appendChild(sliderEl)
@@ -251,7 +289,7 @@ export default class Editor {
     document.addEventListener('keyup', () => this.handleKeyUp())
   }
 
-  private hideDisplay() {
+  public hideDisplay() {
     this.editor.classList.add('hide')
     this.editor.classList.remove('show')
     if (this.canvas) {
@@ -416,6 +454,21 @@ export default class Editor {
     this.updateActivation(newData, transformationFn)
   }
 
+  private scale() {
+    const { width, height } = this.canvas
+    const { relativeId, layer } = this.currentActSelection
+    const { data } = layer.activations[relativeId]
+
+    const newData = scale(data, width, height, this._scaleFactor)
+    const imageData = act2ImageData(newData, width, height)
+    this.ctx.putImageData(imageData, 0, 0)
+
+    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
+      scale(_d, _w, _h, this._scaleFactor)
+
+    this.updateActivation(newData, transformationFn)
+  }
+
   private screenScale(w: number) {
     const maxLen = Math.min(window.innerHeight, window.innerWidth)
     const targetSize = maxLen * 0.8
@@ -452,6 +505,10 @@ export default class Editor {
 
   public set brushSize(val: number) {
     this._brushSize = val
+  }
+
+  public set scaleFactor(val: number) {
+    this._scaleFactor = val
   }
 
   /* private combineRGBData(

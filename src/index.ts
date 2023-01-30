@@ -256,6 +256,11 @@ async function init() {
     editor.show(currentActSelection)
   })
 
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    const { key } = e
+    if (key === 'Escape') editor.hideDisplay()
+  })
+
   requestAnimationFrame(draw)
   // ------------------------------------
 }

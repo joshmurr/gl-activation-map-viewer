@@ -77,6 +77,39 @@ export const rotate = (
   return newData
 }
 
+export const scale = (
+  pixels: Float32Array,
+  width: number,
+  height: number,
+  scaleFactor: number,
+) => {
+  /**
+   * This algorithm was written by Chat-GPT.
+   * I spent quite a bit of time faffing with this, mainly trying to get it
+   * to scale from the centre of the image. And I couldn't really figure
+   * out the CLAMP_TO_EDGE style downscaling. It still took a fair bit of
+   * back and forth with Chat-GPT, but it got much closer on first attempt
+   * than I did...
+   */
+  const scaledPixels = new Float32Array(pixels.length)
+
+  const xCenter = Math.floor(width / 2)
+  const yCenter = Math.floor(height / 2)
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x
+      const xScaled = xCenter + (x - xCenter) * scaleFactor
+      const yScaled = yCenter + (y - yCenter) * scaleFactor
+      const xIndex = Math.min(Math.max(Math.floor(xScaled), 0), width - 1)
+      const yIndex = Math.min(Math.max(Math.floor(yScaled), 0), height - 1)
+      scaledPixels[index] = pixels[yIndex * width + xIndex]
+    }
+  }
+
+  return scaledPixels
+}
+
 export const fill = (input: Float32Array, color: number): Float32Array => {
   return input.fill(color)
 }
