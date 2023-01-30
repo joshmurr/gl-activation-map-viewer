@@ -10,6 +10,10 @@ export default class Editor {
   private activationsCont: HTMLElement
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
+
+  private overlayCanvas: HTMLCanvasElement
+  private overlayCtx: CanvasRenderingContext2D
+
   private tools: HTMLElement
   private SHIFT = false
   /* private SCALE = 25 */
@@ -123,7 +127,12 @@ export default class Editor {
     this.canvas = document.createElement('canvas')
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
+    this.overlayCanvas = document.createElement('canvas')
+    this.overlayCtx = this.overlayCanvas.getContext('2d')
+    this.overlayCtx.globalCompositeOperation = 'multiply'
+
     canvasCont.appendChild(this.canvas)
+    canvasCont.appendChild(this.overlayCanvas)
     this.editor.appendChild(canvasCont)
     this.editor.appendChild(this.tools)
     document.body.appendChild(this.editor)
@@ -134,10 +143,9 @@ export default class Editor {
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = layer.shape.slice(2)
-    this.canvas.width = w
-    this.canvas.height = h
-    this.canvas.style.width = `${w * this.screenScale(w)}px`
-    this.canvas.style.height = `${h * this.screenScale(w)}px`
+
+    this.initCanvas(this.canvas, w, h)
+    this.initCanvas(this.overlayCanvas, w, h, 10)
 
     const canvasContainer = document.querySelector('.canvasCont') as HTMLElement
     canvasContainer.style.width = `${w * this.screenScale(w)}px`
@@ -148,6 +156,18 @@ export default class Editor {
 
     this.ctx.putImageData(imageData, 0, 0)
     this.showDisplay()
+  }
+
+  private initCanvas(
+    canvas: HTMLCanvasElement,
+    w: number,
+    h: number,
+    scale = 1,
+  ) {
+    canvas.width = w * scale
+    canvas.height = h * scale
+    canvas.style.width = `${w * this.screenScale(w)}px`
+    canvas.style.height = `${h * this.screenScale(h)}px`
   }
 
   private addButton(
@@ -200,16 +220,11 @@ export default class Editor {
   private showDisplay() {
     this.editor.classList.remove('hide')
     this.editor.classList.add('show')
-    this.canvas.addEventListener('click', (e) => {
-      this.draw(e)
-    })
+    this.canvas.addEventListener('click', (e) => this.draw(e))
+    this.overlayCanvas.addEventListener('mousemove', (e) => this.drawBrush(e))
 
-    document.addEventListener('keydown', (e) => {
-      this.handleKeyDown(e)
-    })
-    document.addEventListener('keyup', () => {
-      this.handleKeyUp()
-    })
+    document.addEventListener('keydown', (e) => this.handleKeyDown(e))
+    document.addEventListener('keyup', () => this.handleKeyUp())
   }
 
   private hideDisplay() {
@@ -217,6 +232,11 @@ export default class Editor {
     this.editor.classList.remove('show')
     if (this.canvas) {
       this.canvas.removeEventListener('click', this.draw)
+    }
+    if (this.overlayCanvas) {
+      this.overlayCanvas.removeEventListener('mousemove', (e) =>
+        this.drawBrush(e),
+      )
     }
     document.removeEventListener('keydown', this.handleKeyDown)
     document.removeEventListener('keyup', this.handleKeyUp)
@@ -241,18 +261,18 @@ export default class Editor {
   }
 
   private draw(event: MouseEvent) {
-    const canvasRect = this.canvas.getBoundingClientRect()
+    const { left, top } = this.canvas.getBoundingClientRect()
     const { width } = this.canvas
     const scale = this.screenScale(width)
-    const x1 = Math.floor((event.clientX - canvasRect.left) / scale)
-    const y1 = Math.floor((event.clientY - canvasRect.top) / scale)
+    const x1 = Math.floor((event.clientX - left) / scale)
+    const y1 = Math.floor((event.clientY - top) / scale)
 
     const x2 = x1 + this._brushSize
     const y2 = y1 + this._brushSize
 
     const coords: RectCoords = [x1, y1, x2, y2]
 
-    const fillFn = (c: number, i: number) => {
+    const fillFn = (c: number) => {
       const out = this.SHIFT ? c - 0.1 : c + 0.1
       return out
     }
@@ -270,6 +290,23 @@ export default class Editor {
     const newImageData = new ImageData(newData, size, size)
 
     this.ctx.putImageData(newImageData, x - offset, y - offset)
+  }
+
+  private drawBrush(event: MouseEvent) {
+    const { width: sWidth } = this.canvas
+    const { width, height } = this.overlayCanvas
+    const scale = this.screenScale(sWidth) / 10
+
+    const { left, top } = this.overlayCanvas.getBoundingClientRect()
+    const x = Math.floor(Math.floor((event.clientX - left) / scale) / 10) * 10 // Snap
+    const y = Math.floor(Math.floor((event.clientY - top) / scale) / 10) * 10 // Snap
+
+    this.overlayCtx.beginPath()
+    this.overlayCtx.clearRect(0, 0, width, height)
+    this.overlayCtx.strokeStyle = 'rgba(255,0,0,0.5)'
+    this.overlayCtx.rect(x, y, 2 * 10, 2 * 10)
+    this.overlayCtx.stroke()
+    this.overlayCtx.closePath()
   }
 
   private updateActivation(
