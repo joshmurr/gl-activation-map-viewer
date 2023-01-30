@@ -14,7 +14,8 @@ import { findLayer } from './utils'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
-const canvas = G.canvas(1024, 512, {}, containerEl)
+const { width } = screen
+const canvas = G.canvas(width, Math.floor(width * 0.5), {}, containerEl)
 const gl = G.gl
 const program = G.shaderProgram(renderVert, renderFrag)
 const pickProgram = G.shaderProgram(pickingVert, pickingFrag)
