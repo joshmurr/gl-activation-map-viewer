@@ -5,6 +5,9 @@ import { fill, rect, rotate } from './transformations'
 import { act2ImageData } from './conversions'
 import { TypedArray } from './typedArrays'
 
+type Callback = (e?: MouseEvent) => void
+type NamedCallback = [name: string, cb: Callback]
+
 export default class Editor {
   private editor: HTMLElement
   private activationsCont: HTMLElement
@@ -15,6 +18,7 @@ export default class Editor {
   private overlayCtx: CanvasRenderingContext2D
 
   private tools: HTMLElement
+  private tooltipCont: HTMLElement
   private SHIFT = false
   /* private SCALE = 25 */
   private _needsUpdate = false
@@ -41,51 +45,62 @@ export default class Editor {
 
     const buttons = [
       {
-        text: 'close',
+        text: 'X',
         parent: this.editor,
-        id: null,
-        callback: () => this.hideDisplay(),
+        id: 'close',
+        callbacks: [['click', () => this.hideDisplay()]],
       },
       {
         text: 'Black',
         parent: this.tools,
         id: null,
-        callback: () => this.fill('black'),
+        callbacks: [['click', () => this.fill('black')]],
       },
       {
         text: 'White',
         parent: this.tools,
         id: null,
-        callback: () => this.fill('white'),
+        callbacks: [['click', () => this.fill('white')]],
       },
       {
         text: 'Grey',
         parent: this.tools,
         id: null,
-        callback: () => this.fill('grey'),
+        callbacks: [['click', () => this.fill('grey')]],
       },
       {
         text: 'Rect',
         parent: this.tools,
         id: null,
-        callback: () => this.autoFillRect('grey'),
+        callbacks: [['click', () => this.autoFillRect('grey')]],
       },
       {
         text: 'Rotate',
         parent: this.tools,
         id: null,
-        callback: () => this.rotate(),
+        callbacks: [['click', () => this.rotate()]],
       },
       {
         text: 'Apply to Stack',
         parent: this.tools,
         id: 'all',
-        callback: () => this.toggleApplyToAll(),
+        callbacks: [
+          ['click', () => this.toggleApplyToAll()],
+          [
+            'mouseover',
+            () =>
+              this.showTooltip(
+                'When selected, the transformation will apply to the entire activation map.',
+              ),
+          ],
+          ['mouseout', () => this.hideTooltip()],
+          ['mousemove', (e: MouseEvent) => this.updateTooltip(e)],
+        ],
       },
     ]
 
-    buttons.forEach(({ text, parent, callback, id }) =>
-      this.addButton(text, parent, callback, id),
+    buttons.forEach(({ text, parent, callbacks, id }) =>
+      this.addButton(text, parent, callbacks, id),
     )
 
     const sliders = [
@@ -121,6 +136,9 @@ export default class Editor {
         ),
     )
 
+    this.tooltipCont = document.createElement('div')
+    this.tooltipCont.classList.add('tooltip', 'hide')
+
     const canvasCont = document.createElement('div')
     canvasCont.classList.add('canvasCont')
 
@@ -135,6 +153,7 @@ export default class Editor {
     canvasCont.appendChild(this.overlayCanvas)
     this.editor.appendChild(canvasCont)
     this.editor.appendChild(this.tools)
+    document.body.appendChild(this.tooltipCont)
     document.body.appendChild(this.editor)
   }
 
@@ -173,13 +192,18 @@ export default class Editor {
   private addButton(
     text: string,
     parent: HTMLElement,
-    callback: (e?: MouseEvent) => void,
+    callbacks: NamedCallback[],
     id?: string,
   ) {
-    const button = document.createElement('span')
-    button.innerText = text
-    button.addEventListener('click', callback)
-    button.id = id ? id : null
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.value = text
+    button.innerHTML = text
+    for (const callback of callbacks) {
+      const [type, cb] = callback
+      button.addEventListener(type, cb)
+    }
+    if (id) button.id = id
     parent.appendChild(button)
   }
 
@@ -401,10 +425,25 @@ export default class Editor {
 
   private toggleApplyToAll() {
     this._applyToAll = !this._applyToAll
-    document
-      .getElementById('all')
-      .classList.toggle('highlight', this._applyToAll)
+    document.getElementById('all').classList.toggle('active', this._applyToAll)
     console.log(this._applyToAll)
+  }
+
+  private showTooltip(message: string) {
+    this.tooltipCont.innerText = message
+    this.tooltipCont.classList.remove('hide')
+    this.tooltipCont.classList.add('show')
+  }
+
+  private hideTooltip() {
+    this.tooltipCont.classList.remove('show')
+    this.tooltipCont.classList.add('hide')
+  }
+
+  private updateTooltip(event: MouseEvent) {
+    const { clientX, clientY } = event
+    this.tooltipCont.style.left = `${clientX + 10}px`
+    this.tooltipCont.style.top = `${clientY + 10}px`
   }
 
   public get applyToAll() {

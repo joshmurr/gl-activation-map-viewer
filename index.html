@@ -5,12 +5,33 @@
 
 <body>
   <div id="container">
-    <div id="buttons">
-      <button class="rand-btn">Random</button>
-      <button class="predict-btn">Predict</button>
-      <canvas id="c"></canvas>
-      <!-- <button class="show-examples">Sample Dataset</button> -->
-    </div>
+    <header>
+      <h1>Activation Map Editor</h1>
+      <div>This will be some intro information.</div>
+    </header>
+    <section class="model-vis full-bleed">
+      <div id="model-vis-container"></div>
+    </section>
+    <section>
+      <div class="sidebar">
+        <div id="buttons">
+          <button class="rand-btn">Random</button>
+          <button class="predict-btn">Predict</button>
+        </div>
+        <div class="sidebar__item">
+          <p>Initial Model Output:</p>
+          <canvas id="model-base-output"></canvas>
+        </div>
+        <div class="sidebar__item">
+          <p>Edited Model Output:</p>
+          <canvas id="model-output"></canvas>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>More Information</h2>
+      <p>This will be some more useful information.</p>
+    </section>
   </div>
 </body>
 
