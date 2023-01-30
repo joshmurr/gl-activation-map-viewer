@@ -71,6 +71,7 @@ export default class GUI {
     outputContainer.classList.add('model-output')
 
     let canvas = canvasEl
+    console.log(canvas)
     if (!canvas) {
       canvas = document.createElement('canvas')
       outputContainer.appendChild(canvas)

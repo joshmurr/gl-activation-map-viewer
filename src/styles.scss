@@ -47,9 +47,12 @@ h6 {
 }
 
 .sidebar {
+  &__text {
+    min-width: 30%;
+  }
   &__item {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     canvas {
       width: 128px;
@@ -87,8 +90,14 @@ h6 {
     margin: 45px 15px 15px 15px;
 
     canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
       image-rendering: crisp-edges; /* for firefox */
       image-rendering: pixelated; /* for everything else */
+    }
+
+    canvas:first-child {
       filter: drop-shadow(0.1rem 0.1rem 0.15rem black);
     }
   }
