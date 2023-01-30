@@ -12,7 +12,10 @@ export const xy2contig = (
   y: number,
   width: number,
   nChannels: number,
-) => (x + width * y) * nChannels
+) => {
+  const pixelLoc = (x + width * y) * nChannels
+  return pixelLoc
+}
 
 export const pixel = (
   array: TypedArray,
@@ -33,11 +36,12 @@ export const sliceRow = (
   array: TypedArray,
   x: number,
   y: number,
-  width: number,
+  sliceLen: number,
+  imageWidth: number,
   nChannels: number,
 ) => {
-  const idx = xy2contig(x, y, width, nChannels)
-  return array.slice(idx, idx + nChannels * width)
+  const idx = xy2contig(x, y, imageWidth, nChannels)
+  return array.slice(idx, idx + nChannels * sliceLen)
 }
 
 export const rotate = (
@@ -84,10 +88,14 @@ export const rect = (
   fillFn: FillFn,
 ): Float32Array => {
   const [x1, y1, x2, y2] = coords
-  const width = x2 - x1
 
-  for (let y = y1; y < y2; y += 1) {
-    const data = sliceRow(input, x1, y, width, 1)
+  const xLim = Math.min(x2, imageWidth)
+  const yLim = Math.min(y2, imageWidth)
+
+  const sliceLen = xLim - x1
+
+  for (let y = y1; y < yLim; y += 1) {
+    const data = sliceRow(input, x1, y, sliceLen, imageWidth, 1)
     const newData = new Float32Array(data.map(fillFn))
     const idx = xy2contig(x1, y, imageWidth, 1)
     input.set(newData, idx)

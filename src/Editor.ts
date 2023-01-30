@@ -220,7 +220,7 @@ export default class Editor {
   private showDisplay() {
     this.editor.classList.remove('hide')
     this.editor.classList.add('show')
-    this.canvas.addEventListener('click', (e) => this.draw(e))
+    this.overlayCanvas.addEventListener('click', (e) => this.draw(e))
     this.overlayCanvas.addEventListener('mousemove', (e) => this.drawBrush(e))
 
     document.addEventListener('keydown', (e) => this.handleKeyDown(e))
@@ -280,18 +280,6 @@ export default class Editor {
     this.applyRect(coords, fillFn)
   }
 
-  private brush(x: number, y: number, size: number) {
-    const offset = Math.floor(size / 2)
-
-    const p = this.ctx.getImageData(x - offset, y - offset, size, size)
-    const adder = this.SHIFT ? 10 : -10
-
-    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? c + adder : 255))
-    const newImageData = new ImageData(newData, size, size)
-
-    this.ctx.putImageData(newImageData, x - offset, y - offset)
-  }
-
   private drawBrush(event: MouseEvent) {
     const { width: sWidth } = this.canvas
     const { width, height } = this.overlayCanvas
@@ -304,7 +292,7 @@ export default class Editor {
     this.overlayCtx.beginPath()
     this.overlayCtx.clearRect(0, 0, width, height)
     this.overlayCtx.strokeStyle = 'rgba(255,0,0,0.5)'
-    this.overlayCtx.rect(x, y, 2 * 10, 2 * 10)
+    this.overlayCtx.rect(x, y, this._brushSize * 10, this._brushSize * 10)
     this.overlayCtx.stroke()
     this.overlayCtx.closePath()
   }
