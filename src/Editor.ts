@@ -63,19 +63,19 @@ export default class Editor {
         text: 'Black',
         parent: this.tools,
         id: null,
-        callbacks: [['click', () => this.fill(this.text2FloatColour('black'))]],
+        callbacks: [['click', () => this.fill('black')]],
       },
       {
         text: 'White',
         parent: this.tools,
         id: null,
-        callbacks: [['click', () => this.fill(this.text2FloatColour('white'))]],
+        callbacks: [['click', () => this.fill('white')]],
       },
       {
         text: 'Grey',
         parent: this.tools,
         id: null,
-        callbacks: [['click', () => this.fill(this.text2FloatColour('grey'))]],
+        callbacks: [['click', () => this.fill('grey')]],
       },
       {
         text: 'Rect',
@@ -483,7 +483,8 @@ export default class Editor {
     this.genericTransformation(rect, coords, fillFn)
   }
 
-  private fill(colourValue: number) {
+  private fill(colour: string) {
+    const colourValue = this.text2FloatColour(colour)
     this.genericTransformation(fill, colourValue)
   }
 
