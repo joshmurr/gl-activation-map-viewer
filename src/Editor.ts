@@ -145,7 +145,7 @@ export default class Editor {
             'input[name="scale"]',
           ) as HTMLInputElement
           const val = el.value
-          this.scaleFactor = Number(val)
+          this._scaleFactor = 1 / Number(val)
           document.getElementById('scale-factor').innerText = val
         },
         parent: this.tools,
