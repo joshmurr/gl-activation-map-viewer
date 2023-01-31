@@ -7,6 +7,12 @@ import { TypedArray } from './typedArrays'
 
 type Callback = (e?: MouseEvent) => void
 type NamedCallback = [name: string, cb: Callback]
+type TransformationFn = (
+  data: Float32Array,
+  width: number,
+  height: number,
+  ...args: unknown[]
+) => Float32Array
 
 export default class Editor {
   private editor: HTMLElement
@@ -25,6 +31,7 @@ export default class Editor {
   private currentActSelection: ActivationSelection
   private _brushSize = 3
   private _scaleFactor = 1
+  private _overlayGridScaleFactor = 10
   private rotationCounter = 1
 
   constructor() {
@@ -56,19 +63,19 @@ export default class Editor {
         text: 'Black',
         parent: this.tools,
         id: null,
-        callbacks: [['click', () => this.fill('black')]],
+        callbacks: [['click', () => this.fill(this.text2FloatColour('black'))]],
       },
       {
         text: 'White',
         parent: this.tools,
         id: null,
-        callbacks: [['click', () => this.fill('white')]],
+        callbacks: [['click', () => this.fill(this.text2FloatColour('white'))]],
       },
       {
         text: 'Grey',
         parent: this.tools,
         id: null,
-        callbacks: [['click', () => this.fill('grey')]],
+        callbacks: [['click', () => this.fill(this.text2FloatColour('grey'))]],
       },
       {
         text: 'Rect',
@@ -211,7 +218,7 @@ export default class Editor {
     const [w, h] = layer.shape.slice(2)
 
     this.initCanvas(this.canvas, w, h)
-    this.initCanvas(this.overlayCanvas, w, h, 10)
+    this.initCanvas(this.overlayCanvas, w, h, this._overlayGridScaleFactor)
 
     const canvasContainer = document.querySelector(
       '.canvas-cont',
@@ -248,6 +255,7 @@ export default class Editor {
     button.type = 'button'
     button.value = text
     button.innerHTML = text
+    /* Using a for .. of to preserve `this` */
     for (const callback of callbacks) {
       const [type, cb] = callback
       button.addEventListener(type, cb)
@@ -351,6 +359,10 @@ export default class Editor {
     }
   }
 
+  private text2FloatColour(colour: string) {
+    return this.text2Colour(colour) / 255
+  }
+
   private draw(event: MouseEvent) {
     const { left, top } = this.canvas.getBoundingClientRect()
     const { width } = this.canvas
@@ -377,13 +389,26 @@ export default class Editor {
     const scale = this.screenScale(sWidth) / 10
 
     const { left, top } = this.overlayCanvas.getBoundingClientRect()
-    const x = Math.floor(Math.floor((event.clientX - left) / scale) / 10) * 10 // Snap
-    const y = Math.floor(Math.floor((event.clientY - top) / scale) / 10) * 10 // Snap
+    const x =
+      Math.floor(
+        Math.floor((event.clientX - left) / scale) /
+          this._overlayGridScaleFactor,
+      ) * this._overlayGridScaleFactor // Snap
+    const y =
+      Math.floor(
+        Math.floor((event.clientY - top) / scale) /
+          this._overlayGridScaleFactor,
+      ) * this._overlayGridScaleFactor // Snap
 
     this.overlayCtx.beginPath()
     this.overlayCtx.clearRect(0, 0, width, height)
     this.overlayCtx.strokeStyle = 'rgba(255,0,0,0.5)'
-    this.overlayCtx.rect(x, y, this._brushSize * 10, this._brushSize * 10)
+    this.overlayCtx.rect(
+      x,
+      y,
+      this._brushSize * this._overlayGridScaleFactor,
+      this._brushSize * this._overlayGridScaleFactor,
+    )
     this.overlayCtx.stroke()
     this.overlayCtx.closePath()
   }
@@ -428,74 +453,47 @@ export default class Editor {
     const x2 = Math.floor(x1 + rw)
     const y2 = Math.floor(y1 + rw)
 
-    this.fillRect(colour, [x1, y1, x2, y2])
-  }
+    const coords: RectCoords = [x1, y1, x2, y2]
 
-  private fillRect(colour: string, coords: RectCoords) {
-    const fillColour = this.text2Colour(colour) / 255
+    const fillColour = this.text2FloatColour(colour)
     const fillFn = (_: number) => fillColour
     this.applyRect(coords, fillFn)
   }
 
-  private applyRect(coords: RectCoords, fillFn: FillFn) {
+  private genericTransformation(
+    transformationFn: TransformationFn,
+    ...args: unknown[]
+  ) {
     const { width, height } = this.canvas
     const { relativeId, layer } = this.currentActSelection
     const { data } = layer.activations[relativeId]
-    const newData = rect(data, width, coords, fillFn)
+
+    const newData = transformationFn(data, width, height, ...args)
 
     const imageData = act2ImageData(newData, width, height)
     this.ctx.putImageData(imageData, 0, 0)
 
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      rect(_d, width, coords, fillFn)
+    const deferredTransormation = (_d: Float32Array, _w: number, _h: number) =>
+      transformationFn(_d, _w, _h, ...args)
 
-    this.updateActivation(newData, transformationFn)
+    this.updateActivation(newData, deferredTransormation)
   }
 
-  private fill(colour: string) {
-    const { width, height } = this.canvas
-    const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-    const fillColour = this.text2Colour(colour) / 255
-    const newData = fill(data, fillColour) /* true: same ref */
-    const imageData = act2ImageData(newData, width, height)
-    this.ctx.putImageData(imageData, 0, 0)
+  private applyRect(coords: RectCoords, fillFn: FillFn) {
+    this.genericTransformation(rect, coords, fillFn)
+  }
 
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      fill(_d, fillColour)
-
-    this.updateActivation(newData, transformationFn)
+  private fill(colourValue: number) {
+    this.genericTransformation(fill, colourValue)
   }
 
   private rotate() {
-    const { width, height } = this.canvas
-    const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-
     const angle = (Math.PI / 2) * this.rotationCounter++
-    const newData = rotate(data, width, height, angle)
-    const imageData = act2ImageData(newData, width, height)
-    this.ctx.putImageData(imageData, 0, 0)
-
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      rotate(_d, _w, _h, angle)
-
-    this.updateActivation(newData, transformationFn)
+    this.genericTransformation(rotate, angle)
   }
 
   private scale() {
-    const { width, height } = this.canvas
-    const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-
-    const newData = scale(data, width, height, this._scaleFactor)
-    const imageData = act2ImageData(newData, width, height)
-    this.ctx.putImageData(imageData, 0, 0)
-
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      scale(_d, _w, _h, this._scaleFactor)
-
-    this.updateActivation(newData, transformationFn)
+    this.genericTransformation(scale, this._scaleFactor)
   }
 
   private screenScale(w: number) {
@@ -539,27 +537,4 @@ export default class Editor {
   public set scaleFactor(val: number) {
     this._scaleFactor = val
   }
-
-  /* private combineRGBData(
-    a: Uint8ClampedArray,
-    b: Uint8ClampedArray,
-    blendMode: string,
-  ) {
-    const bOff = blendMode === 'alpha' ? 3 : 0
-    const grayscale = a.reduce((acc, c, i) => {
-      if (i % 4 === 0) {
-        const overlayCol = b[i + bOff] / 255
-        const origCol = c / 255
-        overlayCol > 0 ? acc.push(overlayCol + origCol) : acc.push(origCol)
-      }
-      return acc
-    }, [])
-    return new Float32Array(grayscale)
-  }
-
-  private combineFloatData(a: Float32Array, b: Float32Array) {
-    return a.map((c, i) => {
-      return b[i] > 0 ? b[i] : c
-    })
-  } */
 }
