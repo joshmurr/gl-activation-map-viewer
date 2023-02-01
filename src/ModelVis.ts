@@ -46,7 +46,7 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations(G: GL_Handler, program: WebGLProgram) {
+  public getActivations(G: GL_Handler, program: WebGLProgram) {
     this._layers = []
     let offset = 0
     this.layerNames.forEach((name, layerIdx) => {
