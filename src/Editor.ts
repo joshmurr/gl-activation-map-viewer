@@ -1,22 +1,37 @@
 import * as tf from '@tensorflow/tfjs'
 import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
 
-import { fill, rect, rotate } from './transformations'
+import { fill, rect, rotate, scale } from './transformations'
 import { act2ImageData } from './conversions'
 import { TypedArray } from './typedArrays'
+
+type Callback = (e?: MouseEvent) => void
+type NamedCallback = [name: string, cb: Callback]
+type TransformationFn = (
+  data: Float32Array,
+  width: number,
+  height: number,
+  ...args: unknown[]
+) => Float32Array
 
 export default class Editor {
   private editor: HTMLElement
   private activationsCont: HTMLElement
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
+
+  private overlayCanvas: HTMLCanvasElement
+  private overlayCtx: CanvasRenderingContext2D
+
   private tools: HTMLElement
+  private tooltipCont: HTMLElement
   private SHIFT = false
-  /* private SCALE = 25 */
   private _needsUpdate = false
   private _applyToAll = false
   private currentActSelection: ActivationSelection
   private _brushSize = 3
+  private _scaleFactor = 1
+  private _overlayGridScaleFactor = 10
   private rotationCounter = 1
 
   constructor() {
@@ -29,6 +44,8 @@ export default class Editor {
   private buildContainer() {
     this.editor = document.createElement('div')
     this.editor.id = 'editor'
+    const editorWrapper = document.createElement('div')
+    editorWrapper.classList.add('editor-wrapper')
 
     this.hideDisplay()
 
@@ -37,51 +54,68 @@ export default class Editor {
 
     const buttons = [
       {
-        text: 'close',
+        text: 'X',
         parent: this.editor,
-        id: null,
-        callback: () => this.hideDisplay(),
+        id: 'close',
+        callbacks: [['click', () => this.hideDisplay()]],
       },
       {
         text: 'Black',
         parent: this.tools,
         id: null,
-        callback: () => this.fill('black'),
+        callbacks: [['click', () => this.fill('black')]],
       },
       {
         text: 'White',
         parent: this.tools,
         id: null,
-        callback: () => this.fill('white'),
+        callbacks: [['click', () => this.fill('white')]],
       },
       {
         text: 'Grey',
         parent: this.tools,
         id: null,
-        callback: () => this.fill('grey'),
+        callbacks: [['click', () => this.fill('grey')]],
       },
       {
         text: 'Rect',
         parent: this.tools,
         id: null,
-        callback: () => this.autoFillRect('grey'),
+        callbacks: [['click', () => this.autoFillRect('grey')]],
       },
       {
         text: 'Rotate',
         parent: this.tools,
         id: null,
-        callback: () => this.rotate(),
+        callbacks: [['click', () => this.rotate()]],
+      },
+      {
+        text: 'Scale',
+        parent: this.tools,
+        id: null,
+        callbacks: [['click', () => this.scale()]],
       },
       {
         text: 'Apply to Stack',
         parent: this.tools,
         id: 'all',
-        callback: () => this.toggleApplyToAll(),
+        callbacks: [
+          ['click', () => this.toggleApplyToAll()],
+          [
+            'mouseover',
+            () =>
+              this.showTooltip(
+                'When selected, the transformation will apply to the entire activation map.',
+              ),
+          ],
+          ['mouseout', () => this.hideTooltip()],
+          ['mousemove', (e: MouseEvent) => this.updateTooltip(e)],
+        ],
       },
     ]
 
-    buttons.forEach(({ text, parent, callback, id }) =>
-      this.addButton(text, parent, callback, id),
+    buttons.forEach(({ text, parent, callbacks, id }) =>
+      this.addButton(text, parent, callbacks, id),
     )
 
     const sliders = [
@@ -91,20 +125,53 @@ export default class Editor {
         label: 'Brush Size',
         min: 1,
         max: 12,
+        step: 1,
         value: 6,
+        outputId: 'brush-size',
         callback: () => {
           const el = document.querySelector(
             'input[name="brush"]',
           ) as HTMLInputElement
           const val = el.value
           this.brushSize = Number(val)
+          document.getElementById('brush-size').innerText = val
+        },
+        parent: this.tools,
+      },
+      {
+        name: 'scale',
+        eventListener: 'change',
+        label: 'Scale Factor',
+        min: 0.5,
+        max: 2,
+        step: 0.1,
+        value: 1,
+        outputId: 'scale-factor',
+        callback: () => {
+          const el = document.querySelector(
+            'input[name="scale"]',
+          ) as HTMLInputElement
+          const val = el.value
+          this._scaleFactor = 1 / Number(val)
+          document.getElementById('scale-factor').innerText = val
         },
         parent: this.tools,
       },
     ]
 
     sliders.forEach(
-      ({ name, parent, eventListener, callback, min, max, value, label }) =>
+      ({
+        name,
+        parent,
+        eventListener,
+        callback,
+        min,
+        max,
+        step,
+        value,
+        label,
+        outputId,
+      }) =>
         this.addSlider(
           name,
           parent,
@@ -112,20 +179,35 @@ export default class Editor {
           callback,
           min,
           max,
+          step,
           value,
           label,
+          outputId,
         ),
     )
 
+    this.tooltipCont = document.createElement('div')
+    this.tooltipCont.classList.add('tooltip', 'hide')
+
     const canvasCont = document.createElement('div')
-    canvasCont.classList.add('canvasCont')
+    canvasCont.classList.add('canvas-cont')
 
     this.canvas = document.createElement('canvas')
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
+    this.overlayCanvas = document.createElement('canvas')
+    this.overlayCtx = this.overlayCanvas.getContext('2d')
+    this.overlayCtx.globalCompositeOperation = 'multiply'
+
     canvasCont.appendChild(this.canvas)
-    this.editor.appendChild(canvasCont)
-    this.editor.appendChild(this.tools)
+    canvasCont.appendChild(this.overlayCanvas)
+
+    editorWrapper.appendChild(canvasCont)
+    editorWrapper.appendChild(this.tools)
+
+    this.editor.appendChild(editorWrapper)
+
+    document.body.appendChild(this.tooltipCont)
     document.body.appendChild(this.editor)
   }
 
@@ -134,12 +216,13 @@ export default class Editor {
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = layer.shape.slice(2)
-    this.canvas.width = w
-    this.canvas.height = h
-    this.canvas.style.width = `${w * this.screenScale(w)}px`
-    this.canvas.style.height = `${h * this.screenScale(w)}px`
 
-    const canvasContainer = document.querySelector('.canvasCont') as HTMLElement
+    this.initCanvas(this.canvas, w, h)
+    this.initCanvas(this.overlayCanvas, w, h, this._overlayGridScaleFactor)
+
+    const canvasContainer = document.querySelector(
+      '.canvas-cont',
+    ) as HTMLElement
     canvasContainer.style.width = `${w * this.screenScale(w)}px`
     canvasContainer.style.height = `${h * this.screenScale(w)}px`
 
@@ -150,16 +233,34 @@ export default class Editor {
     this.showDisplay()
   }
 
+  private initCanvas(
+    canvas: HTMLCanvasElement,
+    w: number,
+    h: number,
+    scale = 1,
+  ) {
+    canvas.width = w * scale
+    canvas.height = h * scale
+    canvas.style.width = `${w * this.screenScale(w)}px`
+    canvas.style.height = `${h * this.screenScale(h)}px`
+  }
+
   private addButton(
     text: string,
     parent: HTMLElement,
-    callback: (e?: MouseEvent) => void,
+    callbacks: NamedCallback[],
     id?: string,
   ) {
-    const button = document.createElement('span')
-    button.innerText = text
-    button.addEventListener('click', callback)
-    button.id = id ? id : null
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.value = text
+    button.innerHTML = text
+    /* Using a for .. of to preserve `this` */
+    for (const callback of callbacks) {
+      const [type, cb] = callback
+      button.addEventListener(type, cb)
+    }
+    if (id) button.id = id
     parent.appendChild(button)
   }
 
@@ -170,23 +271,41 @@ export default class Editor {
     callback: (e?: MouseEvent) => void,
     min: number,
     max: number,
+    step: number,
     value: number,
     label: string,
+    outputId: string,
   ) {
+    const container = document.createElement('div')
+    container.classList.add('slider-container')
+
     const sliderEl = document.createElement('input') as HTMLInputElement
     sliderEl.type = 'range'
     sliderEl.name = name
     sliderEl.id = name
     sliderEl.min = min.toString()
     sliderEl.max = max.toString()
+    sliderEl.step = step.toString()
     sliderEl.value = value.toString()
     sliderEl.addEventListener(eventListener, callback)
-    parent.appendChild(sliderEl)
+    container.appendChild(sliderEl)
+
+    const textContainer = document.createElement('div')
+    textContainer.classList.add('text-container')
 
     const labelEl = document.createElement('label')
     labelEl.htmlFor = name
-    labelEl.innerText = label
-    parent.appendChild(labelEl)
+    labelEl.innerText = label + ' '
+
+    const valOutput = document.createElement('span')
+    valOutput.innerText = value.toString()
+    valOutput.id = outputId
+
+    textContainer.appendChild(labelEl)
+    textContainer.appendChild(valOutput)
+
+    container.appendChild(textContainer)
+    parent.appendChild(container)
   }
 
   private handleKeyDown(e: KeyboardEvent) {
@@ -200,23 +319,23 @@ export default class Editor {
   private showDisplay() {
     this.editor.classList.remove('hide')
     this.editor.classList.add('show')
-    this.canvas.addEventListener('click', (e) => {
-      this.draw(e)
-    })
+    this.overlayCanvas.addEventListener('click', (e) => this.draw(e))
+    this.overlayCanvas.addEventListener('mousemove', (e) => this.drawBrush(e))
 
-    document.addEventListener('keydown', (e) => {
-      this.handleKeyDown(e)
-    })
-    document.addEventListener('keyup', () => {
-      this.handleKeyUp()
-    })
+    document.addEventListener('keydown', (e) => this.handleKeyDown(e))
+    document.addEventListener('keyup', () => this.handleKeyUp())
   }
 
-  private hideDisplay() {
+  public hideDisplay() {
     this.editor.classList.add('hide')
     this.editor.classList.remove('show')
     if (this.canvas) {
       this.canvas.removeEventListener('click', this.draw)
+    }
+    if (this.overlayCanvas) {
+      this.overlayCanvas.removeEventListener('mousemove', (e) =>
+        this.drawBrush(e),
+      )
     }
     document.removeEventListener('keydown', this.handleKeyDown)
     document.removeEventListener('keyup', this.handleKeyUp)
@@ -240,19 +359,23 @@ export default class Editor {
     }
   }
 
+  private text2FloatColour(colour: string) {
+    return this.text2Colour(colour) / 255
+  }
+
   private draw(event: MouseEvent) {
-    const canvasRect = this.canvas.getBoundingClientRect()
+    const { left, top } = this.canvas.getBoundingClientRect()
     const { width } = this.canvas
     const scale = this.screenScale(width)
-    const x1 = Math.floor((event.clientX - canvasRect.left) / scale)
-    const y1 = Math.floor((event.clientY - canvasRect.top) / scale)
+    const x1 = Math.floor((event.clientX - left) / scale)
+    const y1 = Math.floor((event.clientY - top) / scale)
 
     const x2 = x1 + this._brushSize
     const y2 = y1 + this._brushSize
 
     const coords: RectCoords = [x1, y1, x2, y2]
 
-    const fillFn = (c: number, i: number) => {
+    const fillFn = (c: number) => {
       const out = this.SHIFT ? c - 0.1 : c + 0.1
       return out
     }
@@ -260,16 +383,34 @@ export default class Editor {
     this.applyRect(coords, fillFn)
   }
 
-  private brush(x: number, y: number, size: number) {
-    const offset = Math.floor(size / 2)
+  private drawBrush(event: MouseEvent) {
+    const { width: sWidth } = this.canvas
+    const { width, height } = this.overlayCanvas
+    const scale = this.screenScale(sWidth) / 10
 
-    const p = this.ctx.getImageData(x - offset, y - offset, size, size)
-    const adder = this.SHIFT ? 10 : -10
+    const { left, top } = this.overlayCanvas.getBoundingClientRect()
+    const x =
+      Math.floor(
+        Math.floor((event.clientX - left) / scale) /
+          this._overlayGridScaleFactor,
+      ) * this._overlayGridScaleFactor // Snap
+    const y =
+      Math.floor(
+        Math.floor((event.clientY - top) / scale) /
+          this._overlayGridScaleFactor,
+      ) * this._overlayGridScaleFactor // Snap
 
-    const newData = p.data.map((c, i) => ((i + 1) % 4 === 0 ? c + adder : 255))
-    const newImageData = new ImageData(newData, size, size)
-
-    this.ctx.putImageData(newImageData, x - offset, y - offset)
+    this.overlayCtx.beginPath()
+    this.overlayCtx.clearRect(0, 0, width, height)
+    this.overlayCtx.strokeStyle = 'rgba(255,0,0,0.5)'
+    this.overlayCtx.rect(
+      x,
+      y,
+      this._brushSize * this._overlayGridScaleFactor,
+      this._brushSize * this._overlayGridScaleFactor,
+    )
+    this.overlayCtx.stroke()
+    this.overlayCtx.closePath()
   }
 
   private updateActivation(
@@ -312,74 +453,78 @@ export default class Editor {
     const x2 = Math.floor(x1 + rw)
     const y2 = Math.floor(y1 + rw)
 
-    this.fillRect(colour, [x1, y1, x2, y2])
-  }
+    const coords: RectCoords = [x1, y1, x2, y2]
 
-  private fillRect(colour: string, coords: RectCoords) {
-    const fillColour = this.text2Colour(colour) / 255
+    const fillColour = this.text2FloatColour(colour)
     const fillFn = (_: number) => fillColour
     this.applyRect(coords, fillFn)
   }
 
-  private applyRect(coords: RectCoords, fillFn: FillFn) {
+  private genericTransformation(
+    transformationFn: TransformationFn,
+    ...args: unknown[]
+  ) {
     const { width, height } = this.canvas
     const { relativeId, layer } = this.currentActSelection
     const { data } = layer.activations[relativeId]
-    const newData = rect(data, width, coords, fillFn)
+
+    const newData = transformationFn(data, width, height, ...args)
 
     const imageData = act2ImageData(newData, width, height)
     this.ctx.putImageData(imageData, 0, 0)
 
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      rect(_d, width, coords, fillFn)
+    const deferredTransormation = (_d: Float32Array, _w: number, _h: number) =>
+      transformationFn(_d, _w, _h, ...args)
 
-    this.updateActivation(newData, transformationFn)
+    this.updateActivation(newData, deferredTransormation)
+  }
+
+  private applyRect(coords: RectCoords, fillFn: FillFn) {
+    this.genericTransformation(rect, coords, fillFn)
   }
 
   private fill(colour: string) {
-    const { width, height } = this.canvas
-    const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-    const fillColour = this.text2Colour(colour) / 255
-    const newData = fill(data, fillColour) /* true: same ref */
-    const imageData = act2ImageData(newData, width, height)
-    this.ctx.putImageData(imageData, 0, 0)
-
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      fill(_d, fillColour)
-
-    this.updateActivation(newData, transformationFn)
+    const colourValue = this.text2FloatColour(colour)
+    this.genericTransformation(fill, colourValue)
   }
 
   private rotate() {
-    const { width, height } = this.canvas
-    const { relativeId, layer } = this.currentActSelection
-    const { data } = layer.activations[relativeId]
-
     const angle = (Math.PI / 2) * this.rotationCounter++
-    const newData = rotate(data, width, height, angle)
-    const imageData = act2ImageData(newData, width, height)
-    this.ctx.putImageData(imageData, 0, 0)
+    this.genericTransformation(rotate, angle)
+  }
 
-    const transformationFn = (_d: Float32Array, _w: number, _h: number) =>
-      rotate(_d, _w, _h, angle)
-
-    this.updateActivation(newData, transformationFn)
+  private scale() {
+    this.genericTransformation(scale, this._scaleFactor)
   }
 
   private screenScale(w: number) {
     const maxLen = Math.min(window.innerHeight, window.innerWidth)
-    const targetSize = maxLen * 0.8
+    const targetSize = maxLen * 0.75
     const scale = targetSize / w
     return scale
   }
 
   private toggleApplyToAll() {
     this._applyToAll = !this._applyToAll
-    document
-      .getElementById('all')
-      .classList.toggle('highlight', this._applyToAll)
+    document.getElementById('all').classList.toggle('active', this._applyToAll)
     console.log(this._applyToAll)
+  }
+
+  private showTooltip(message: string) {
+    this.tooltipCont.innerText = message
+    this.tooltipCont.classList.remove('hide')
+    this.tooltipCont.classList.add('show')
+  }
+
+  private hideTooltip() {
+    this.tooltipCont.classList.remove('show')
+    this.tooltipCont.classList.add('hide')
+  }
+
+  private updateTooltip(event: MouseEvent) {
+    const { clientX, clientY } = event
+    this.tooltipCont.style.left = `${clientX + 10}px`
+    this.tooltipCont.style.top = `${clientY + 10}px`
   }
 
   public get applyToAll() {
@@ -390,26 +535,7 @@ export default class Editor {
     this._brushSize = val
   }
 
-  /* private combineRGBData(
-    a: Uint8ClampedArray,
-    b: Uint8ClampedArray,
-    blendMode: string,
-  ) {
-    const bOff = blendMode === 'alpha' ? 3 : 0
-    const grayscale = a.reduce((acc, c, i) => {
-      if (i % 4 === 0) {
-        const overlayCol = b[i + bOff] / 255
-        const origCol = c / 255
-        overlayCol > 0 ? acc.push(overlayCol + origCol) : acc.push(origCol)
-      }
-      return acc
-    }, [])
-    return new Float32Array(grayscale)
+  public set scaleFactor(val: number) {
+    this._scaleFactor = val
   }
-
-  private combineFloatData(a: Float32Array, b: Float32Array) {
-    return a.map((c, i) => {
-      return b[i] > 0 ? b[i] : c
-    })
-  } */
 }

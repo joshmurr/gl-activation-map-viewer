@@ -12,7 +12,10 @@ export const xy2contig = (
   y: number,
   width: number,
   nChannels: number,
-) => (x + width * y) * nChannels
+) => {
+  const pixelLoc = (x + width * y) * nChannels
+  return pixelLoc
+}
 
 export const pixel = (
   array: TypedArray,
@@ -22,7 +25,7 @@ export const pixel = (
   nChannels: number,
 ) => {
   /**
-   * Grabs pixels values from contiguous array based
+   * Grabs input values from contiguous array based
    * on XY coords.
    */
   const idx = xy2contig(x, y, width, nChannels)
@@ -33,11 +36,12 @@ export const sliceRow = (
   array: TypedArray,
   x: number,
   y: number,
-  width: number,
+  sliceLen: number,
+  imageWidth: number,
   nChannels: number,
 ) => {
-  const idx = xy2contig(x, y, width, nChannels)
-  return array.slice(idx, idx + nChannels * width)
+  const idx = xy2contig(x, y, imageWidth, nChannels)
+  return array.slice(idx, idx + nChannels * sliceLen)
 }
 
 export const rotate = (
@@ -73,23 +77,67 @@ export const rotate = (
   return newData
 }
 
-export const fill = (input: Float32Array, color: number): Float32Array => {
+export const scale = (
+  input: Float32Array,
+  width: number,
+  height: number,
+  scaleFactor: number,
+) => {
+  /**
+   * This algorithm was written by Chat-GPT.
+   * I spent quite a bit of time faffing with this, mainly trying to get it
+   * to scale from the centre of the image. And I couldn't really figure
+   * out the CLAMP_TO_EDGE style downscaling. It still took a fair bit of
+   * back and forth with Chat-GPT, but it got much closer on first attempt
+   * than I did...
+   */
+  const scaledPixels = new Float32Array(input.length)
+
+  const xCenter = Math.floor(width / 2)
+  const yCenter = Math.floor(height / 2)
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x
+      const xScaled = xCenter + (x - xCenter) * scaleFactor
+      const yScaled = yCenter + (y - yCenter) * scaleFactor
+      const xIndex = Math.min(Math.max(Math.floor(xScaled), 0), width - 1)
+      const yIndex = Math.min(Math.max(Math.floor(yScaled), 0), height - 1)
+      scaledPixels[index] = input[yIndex * width + xIndex]
+    }
+  }
+
+  return scaledPixels
+}
+
+export const fill = (
+  input: Float32Array,
+  width: number,
+  height: number,
+  color: number,
+): Float32Array => {
+  console.log(color)
   return input.fill(color)
 }
 
 export const rect = (
   input: Float32Array,
-  imageWidth: number,
+  width: number,
+  height: number,
   coords: RectCoords,
   fillFn: FillFn,
 ): Float32Array => {
   const [x1, y1, x2, y2] = coords
-  const width = x2 - x1
 
-  for (let y = y1; y < y2; y += 1) {
-    const data = sliceRow(input, x1, y, width, 1)
+  const xLim = Math.min(x2, width)
+  const yLim = Math.min(y2, width)
+
+  const sliceLen = xLim - x1
+
+  for (let y = y1; y < yLim; y += 1) {
+    const data = sliceRow(input, x1, y, sliceLen, width, 1)
     const newData = new Float32Array(data.map(fillFn))
-    const idx = xy2contig(x1, y, imageWidth, 1)
+    const idx = xy2contig(x1, y, width, 1)
     input.set(newData, idx)
   }
 

@@ -2,7 +2,7 @@ import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
 import { ActivationSelection, Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
-import Debug from './Debug'
+/* import Debug from './Debug' */
 import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
@@ -13,7 +13,9 @@ import './styles.scss'
 import { findLayer } from './utils'
 
 const G = new GL_Handler()
-const canvas = G.canvas(1024, 512)
+const containerEl = document.getElementById('model-vis-container')
+const { width } = screen
+const canvas = G.canvas(width, Math.floor(width * 0.5), {}, containerEl)
 const gl = G.gl
 const program = G.shaderProgram(renderVert, renderFrag)
 const pickProgram = G.shaderProgram(pickingVert, pickingFrag)
@@ -56,8 +58,8 @@ const currentActSelection: ActivationSelection = {
   layer: null,
 }
 
-const debug = new Debug()
-debug.addField('ID', () => oldPickNdx.toString())
+/* const debug = new Debug() */
+/* debug.addField('ID', () => oldPickNdx.toString()) */
 
 const modelUrl =
   process.env.NODE_ENV === 'development'
@@ -84,9 +86,15 @@ async function init() {
   let __layers = await vis.getActivations(G, program)
 
   /* GUI */
-  const gui = new GUI()
-  gui.initImageOutput('base')
-  gui.initImageOutput('output')
+  const gui = new GUI(document.querySelector('.sidebar'))
+  gui.initImageOutput(
+    'base',
+    document.getElementById('model-base-output') as HTMLCanvasElement,
+  )
+  gui.initImageOutput(
+    'output',
+    document.getElementById('model-output') as HTMLCanvasElement,
+  )
 
   const random = async () => {
     const currentZ = tf.randomNormal([
@@ -188,7 +196,7 @@ async function init() {
 
       offset += shape[1]
 
-      debug.update()
+      /* debug.update() */
     })
     gl.useProgram(program)
     gl.clearColor(0.9, 0.9, 0.9, 1)
@@ -246,6 +254,11 @@ async function init() {
   canvas.addEventListener('mouseup', function () {
     if (!mouseOnSlice) return false
     editor.show(currentActSelection)
+  })
+
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    const { key } = e
+    if (key === 'Escape') editor.hideDisplay()
   })
 
   requestAnimationFrame(draw)
