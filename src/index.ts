@@ -83,7 +83,7 @@ async function init() {
   await gen.load()
 
   const vis = new ModelVis(gen)
-  let __layers = vis.getActivations(G, program)
+  let layers = vis.getActivations(G, program)
 
   /* GUI */
   const gui = new GUI(document.querySelector('.sidebar'))
@@ -108,7 +108,7 @@ async function init() {
         ]) as Tensor2D
         const logits = gen.run(currentZ) as tf.Tensor
         vis.update(currentZ)
-        __layers = vis.getActivations(G, program)
+        layers = vis.getActivations(G, program)
         gen.displayOut(logits, gui.output.base)
         randBtn.innerText = 'Random'
       })
@@ -123,24 +123,24 @@ async function init() {
 
     waitForRepaint(() => {
       return tf.tidy(() => {
-        const layers = vis.tfLayers
+        const tfLayers = vis.tfLayers
         const layer = currentActSelection.layer
           ? currentActSelection.layer
-          : __layers[0]
+          : layers[0]
 
         const { name } = layer
 
-        const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
-        const sliced = layers.slice(idx)
+        const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
+        const sliced = tfLayers.slice(idx)
 
         const { act } = editor.remakeActivation(layer)
 
         const activations = gen.runLayersGen(sliced, act, idx)
         let logits = null
         let layerIdx = idx
-        const layerOffset = Math.abs(layers.length - __layers.length)
+        const layerOffset = Math.abs(tfLayers.length - layers.length)
         for ({ logits, layerIdx } of activations) {
-          const layer = __layers[layerIdx - layerOffset]
+          const layer = layers[layerIdx - layerOffset]
           vis.putActivations(layer, logits)
         }
 
@@ -177,7 +177,7 @@ async function init() {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
     let offset = 0
-    __layers.forEach(({ activations, shape }) => {
+    layers.forEach(({ activations, shape }) => {
       activations.forEach(({ mesh, uid }) => {
         gl.bindVertexArray(mesh.VAO)
         G.setUniforms(pickUniformSetters, {
@@ -224,7 +224,7 @@ async function init() {
     gl.enable(gl.CULL_FACE)
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
-    __layers.forEach(({ activations }) => {
+    layers.forEach(({ activations }) => {
       // RENDER -----------------------
       activations.forEach(({ mesh, uniforms }) => {
         gl.bindVertexArray(mesh.VAO)
@@ -255,8 +255,8 @@ async function init() {
 
   canvas.addEventListener('mousedown', function () {
     if (oldPickNdx > -1) {
-      const [layerIdx, relativeId] = findLayer(oldPickNdx, __layers)
-      const layer = __layers[layerIdx]
+      const [layerIdx, relativeId] = findLayer(oldPickNdx, layers)
+      const layer = layers[layerIdx]
       const layerName = layer.name
 
       const selection = {
