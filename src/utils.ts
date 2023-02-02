@@ -1,4 +1,4 @@
-import type { ActivationStore, LayerInfo } from './types'
+import type { LayerInfo } from './types'
 
 export function HSVtoRGB(h: number, s: number, v: number): Array<number> {
   /* Expects 0 <= h, s, v <= 1 */
@@ -95,4 +95,10 @@ export const findLayer = (id: number, layers: LayerInfo[]) => {
   }
 
   return findLayerIter(id, 0, bins)
+}
+
+export const waitForRepaint = (callback: () => void) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => callback())
+  })
 }

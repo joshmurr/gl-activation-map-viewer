@@ -7,7 +7,7 @@ export default class Generator extends Model {
     super(info)
   }
 
-  public async run(inputZ?: tf.Tensor) {
+  public run(inputZ?: tf.Tensor) {
     return tf.tidy(() => {
       const z = inputZ || tf.randomNormal([1, this.info.latent_dim])
       return this.model.predict(z)
