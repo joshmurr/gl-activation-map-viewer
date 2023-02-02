@@ -46,13 +46,14 @@ export default class ModelVis {
     return activations
   }
 
-  public async getActivations(G: GL_Handler, program: WebGLProgram) {
+  public getActivations(G: GL_Handler, program: WebGLProgram) {
     this._layers = []
     let offset = 0
     this.layerNames.forEach((name, layerIdx) => {
       const layer = this.layerOutputs[name]
 
       /* Filter out non-conv layers */
+      /* TODO: Don't filter out non-conv layers, but account for them */
       if (layer.shape.length < 3) {
         return
       }
@@ -131,7 +132,7 @@ export default class ModelVis {
     }
   }
 
-  get __layers() {
+  get layers() {
     return this._layers
   }
 

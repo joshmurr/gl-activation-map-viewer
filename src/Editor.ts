@@ -507,7 +507,6 @@ export default class Editor {
   private toggleApplyToAll() {
     this._applyToAll = !this._applyToAll
     document.getElementById('all').classList.toggle('active', this._applyToAll)
-    console.log(this._applyToAll)
   }
 
   private showTooltip(message: string) {

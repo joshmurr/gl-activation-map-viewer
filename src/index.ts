@@ -10,7 +10,7 @@ import { Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import './styles.scss'
-import { findLayer } from './utils'
+import { findLayer, waitForRepaint } from './utils'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
@@ -83,7 +83,7 @@ async function init() {
   await gen.load()
 
   const vis = new ModelVis(gen)
-  let __layers = await vis.getActivations(G, program)
+  let layers = vis.getActivations(G, program)
 
   /* GUI */
   const gui = new GUI(document.querySelector('.sidebar'))
@@ -96,40 +96,58 @@ async function init() {
     document.getElementById('model-output') as HTMLCanvasElement,
   )
 
-  const random = async () => {
-    const currentZ = tf.randomNormal([
-      1,
-      modelInfo.dcgan64.latent_dim,
-    ]) as Tensor2D
-    const logits = (await gen.run(currentZ)) as tf.Tensor
-    vis.update(currentZ)
-    __layers = await vis.getActivations(G, program)
-    gen.displayOut(logits, gui.output.base)
+  const random = () => {
+    const randBtn = document.querySelector('.rand-btn') as HTMLButtonElement
+    randBtn.innerText = 'Loading...'
+
+    waitForRepaint(() => {
+      return tf.tidy(() => {
+        const currentZ = tf.randomNormal([
+          1,
+          modelInfo.dcgan64.latent_dim,
+        ]) as Tensor2D
+        const logits = gen.run(currentZ) as tf.Tensor
+        vis.update(currentZ)
+        layers = vis.getActivations(G, program)
+        gen.displayOut(logits, gui.output.base)
+        randBtn.innerText = 'Random'
+      })
+    })
   }
 
   const predict = async () => {
-    const layers = vis.tfLayers
-    const layer = currentActSelection.layer
-      ? currentActSelection.layer
-      : __layers[0]
+    const predictBtn = document.querySelector(
+      '.predict-btn',
+    ) as HTMLButtonElement
+    predictBtn.innerText = 'Loading...'
 
-    const { name } = layer
+    waitForRepaint(() => {
+      return tf.tidy(() => {
+        const tfLayers = vis.tfLayers
+        const layer = currentActSelection.layer
+          ? currentActSelection.layer
+          : layers[0]
 
-    const idx = layers.indexOf(layers.find((l) => l.name === name)) + 1
-    const sliced = layers.slice(idx)
+        const { name } = layer
 
-    const { act } = editor.remakeActivation(layer)
+        const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
+        const sliced = tfLayers.slice(idx)
 
-    const activations = gen.runLayersGen(sliced, act, idx)
-    let logits = null
-    let layerIdx = idx
-    const layerOffset = Math.abs(layers.length - __layers.length)
-    for ({ logits, layerIdx } of activations) {
-      const layer = __layers[layerIdx - layerOffset]
-      vis.putActivations(layer, logits)
-    }
+        const { act } = editor.remakeActivation(layer)
 
-    gen.displayOut(logits, gui.output.output)
+        const activations = gen.runLayersGen(sliced, act, idx)
+        let logits = null
+        let layerIdx = idx
+        const layerOffset = Math.abs(tfLayers.length - layers.length)
+        for ({ logits, layerIdx } of activations) {
+          const layer = layers[layerIdx - layerOffset]
+          vis.putActivations(layer, logits)
+        }
+
+        gen.displayOut(logits, gui.output.output)
+        predictBtn.innerText = 'Predict'
+      })
+    })
   }
   const buttons: Button[] = [
     {
@@ -159,7 +177,7 @@ async function init() {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
     let offset = 0
-    __layers.forEach(({ activations, shape }) => {
+    layers.forEach(({ activations, shape }) => {
       activations.forEach(({ mesh, uid }) => {
         gl.bindVertexArray(mesh.VAO)
         G.setUniforms(pickUniformSetters, {
@@ -206,7 +224,7 @@ async function init() {
     gl.enable(gl.CULL_FACE)
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
-    __layers.forEach(({ activations }) => {
+    layers.forEach(({ activations }) => {
       // RENDER -----------------------
       activations.forEach(({ mesh, uniforms }) => {
         gl.bindVertexArray(mesh.VAO)
@@ -237,8 +255,8 @@ async function init() {
 
   canvas.addEventListener('mousedown', function () {
     if (oldPickNdx > -1) {
-      const [layerIdx, relativeId] = findLayer(oldPickNdx, __layers)
-      const layer = __layers[layerIdx]
+      const [layerIdx, relativeId] = findLayer(oldPickNdx, layers)
+      const layer = layers[layerIdx]
       const layerName = layer.name
 
       const selection = {
