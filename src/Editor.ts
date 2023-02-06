@@ -4,7 +4,7 @@ import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
 import { fill, rect, rotate, scale } from './transformations'
 import { act2ImageData } from './conversions'
 import { TypedArray } from './typedArrays'
-import { swapClasses } from './utils'
+import { getLayerDims, swapClasses } from './utils'
 
 type Callback = (e?: MouseEvent) => void
 type NamedCallback = [name: string, cb: Callback]
@@ -218,18 +218,12 @@ export default class Editor {
     this.rotationCounter = 1
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
-    const [w, h] = layer.shape.slice(2)
+    const [w, h] = getLayerDims(layer.shape)
 
     this.enableTools()
 
     this.initCanvas(this.canvas, w, h)
     this.initCanvas(this.overlayCanvas, w, h, this._overlayGridScaleFactor)
-
-    const canvasContainer = document.querySelector(
-      '.canvas-cont',
-    ) as HTMLElement
-    canvasContainer.style.width = `${w * this.screenScale(w)}px`
-    canvasContainer.style.height = `${h * this.screenScale(w)}px`
 
     const { data } = layer.activations[relativeId]
     const imageData = act2ImageData(data, w, h)
@@ -238,18 +232,9 @@ export default class Editor {
     this.showDisplay()
   }
 
-  public showOutput() {
-    const [w, h] = [64, 64]
-    this.initCanvas(this.canvas, w, h)
-
+  public showOutput(width: number, height: number) {
+    this.initCanvas(this.canvas, width, height)
     this.disableTools()
-
-    const canvasContainer = document.querySelector(
-      '.canvas-cont',
-    ) as HTMLElement
-    canvasContainer.style.width = `${w * this.screenScale(w)}px`
-    canvasContainer.style.height = `${h * this.screenScale(w)}px`
-
     this.showDisplay()
   }
 
@@ -265,7 +250,6 @@ export default class Editor {
 
   private enableTools() {
     this._buttons.forEach((button) => {
-      console.log(button)
       button.disabled = false
     })
     this._sliders.forEach((slider) => {
@@ -283,6 +267,12 @@ export default class Editor {
     canvas.height = h * scale
     canvas.style.width = `${w * this.screenScale(w)}px`
     canvas.style.height = `${h * this.screenScale(h)}px`
+
+    const canvasContainer = document.querySelector(
+      '.canvas-cont',
+    ) as HTMLElement
+    canvasContainer.style.width = `${w * this.screenScale(w)}px`
+    canvasContainer.style.height = `${h * this.screenScale(w)}px`
   }
 
   private addButton(
@@ -478,7 +468,7 @@ export default class Editor {
 
   public remakeActivation(layer: LayerInfo) {
     const { activations } = layer
-    const [w, h] = layer.shape.slice(2)
+    const [w, h] = getLayerDims(layer.shape)
     const layerTensors = activations.map((quad) => {
       return tf.tensor(quad.data).reshape([w, h, 1, 1]).squeeze()
     })

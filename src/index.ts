@@ -5,10 +5,10 @@ import { vec3, mat4 } from 'gl-matrix'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
-import { Tensor2D } from '@tensorflow/tfjs'
+import { Tensor, Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
-import { findLayer, swapClasses, waitForRepaint } from './utils'
+import { findLayer, getLayerDims, swapClasses, waitForRepaint } from './utils'
 import './styles/main.scss'
 
 const G = new GL_Handler()
@@ -99,12 +99,22 @@ async function init() {
   const base = document.getElementById('model-base-output') as HTMLCanvasElement
   const output = document.getElementById('model-output') as HTMLCanvasElement
 
-  const handleOutputClick = () => {
-    editor.showOutput()
-    displayCurrentOutput(editor.displayCanvas)
+  let initialAct: Tensor | null = null
+
+  const handleInitialOutputClick = () => {
+    const [w, h] = getLayerDims(layers[layers.length - 1].shape)
+    editor.showOutput(w, h)
+    gen.displayOut(initialAct, editor.displayCanvas)
   }
 
-  gui.initImageOutput('base', base, handleOutputClick)
+  const handleOutputClick = () => {
+    const [w, h] = getLayerDims(layers[layers.length - 1].shape)
+    editor.showOutput(w, h)
+    const { act } = editor.remakeActivation(layers[layers.length - 1])
+    gen.displayOut(act, editor.displayCanvas)
+  }
+
+  gui.initImageOutput('base', base, handleInitialOutputClick)
   gui.initImageOutput('output', output, handleOutputClick)
 
   const random = () => {
@@ -112,17 +122,21 @@ async function init() {
     randBtn.innerText = 'Loading...'
 
     waitForRepaint(() => {
-      return tf.tidy(() => {
-        const currentZ = tf.randomNormal([
-          1,
-          modelInfo.dcgan64.latent_dim,
-        ]) as Tensor2D
-        const logits = gen.run(currentZ) as tf.Tensor
-        vis.update(currentZ)
-        layers = vis.getActivations(G, program)
-        gen.displayOut(logits, gui.output.base)
-        randBtn.innerText = 'Random'
-      })
+      /**
+       * We're not tf.tidy-ing here so we don't dispose the tensor
+       * so that we can render it in the gui callbacks above using
+       * `initialAct`.
+       */
+      const currentZ = tf.randomNormal([
+        1,
+        modelInfo.dcgan64.latent_dim,
+      ]) as Tensor2D
+      const logits = gen.run(currentZ) as tf.Tensor
+      vis.update(currentZ)
+      layers = vis.getActivations(G, program)
+      initialAct = logits
+      gen.displayOut(logits, gui.output.base)
+      randBtn.innerText = 'Random'
     })
   }
 
@@ -159,11 +173,6 @@ async function init() {
         predictBtn.innerText = 'Predict'
       })
     })
-  }
-
-  const displayCurrentOutput = (surface: HTMLCanvasElement) => {
-    const { act } = editor.remakeActivation(layers[layers.length - 1])
-    gen.displayOut(act, surface)
   }
 
   const buttons: Button[] = [
@@ -311,7 +320,9 @@ async function init() {
     if (key === 'Escape') editor.hideDisplay()
   })
 
-  displayCurrentOutput(gui.output.base)
+  const { act } = editor.remakeActivation(layers[layers.length - 1])
+  initialAct = act
+  gen.displayOut(act, gui.output.base)
 
   requestAnimationFrame(draw)
   // ------------------------------------

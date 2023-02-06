@@ -107,3 +107,6 @@ export const swapClasses = (el: HTMLElement, remove: string, add: string) => {
   el.classList.remove(remove)
   el.classList.add(add)
 }
+
+export const getLayerDims = (shape: number[]) =>
+  shape.length < 3 ? [1, 1] : shape.slice(2)
