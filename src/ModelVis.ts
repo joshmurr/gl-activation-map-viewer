@@ -53,7 +53,8 @@ export default class ModelVis {
       const layer = this.layerOutputs[name]
 
       /* Filter out non-conv layers */
-      /* TODO: Don't filter out non-conv layers, but account for them */
+      /* TODO: Don't filter out non-conv layers, but account for them, */
+      /* and render them */
       if (layer.shape.length < 3) {
         return
       }

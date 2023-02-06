@@ -28,21 +28,21 @@ export default class GUI {
     this._sliders = {}
   }
 
-  public initButtons(buttons: Array<Button>) {
+  public initButtons(buttons: Button[]) {
     buttons.forEach(({ selector, eventListener, callback }) => {
       const buttonEl = document.querySelector(selector)
       buttonEl.addEventListener(eventListener, callback)
     })
   }
 
-  public initCheckboxes(checkboxes: Array<Checkbox>) {
+  public initCheckboxes(checkboxes: Checkbox[]) {
     checkboxes.forEach(({ name, selector }) => {
       const checkboxEl = document.querySelector(selector)
       this.checkboxes[name] = checkboxEl as HTMLInputElement
     })
   }
 
-  public initSliders(sliders: Array<Slider>) {
+  public initSliders(sliders: Slider[]) {
     sliders.forEach(({ name, eventListener, callback }) => {
       const sliderEl = document.querySelector(`input[name="${name}"]`)
       sliderEl.addEventListener(eventListener, callback)

@@ -2,15 +2,14 @@ import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
 import { ActivationSelection, Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
-/* import Debug from './Debug' */
 import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
 import { Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
+import { findLayer, swapClasses, waitForRepaint } from './utils'
 import './styles.scss'
-import { findLayer, waitForRepaint } from './utils'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
@@ -58,9 +57,6 @@ const currentActSelection: ActivationSelection = {
   layer: null,
 }
 
-/* const debug = new Debug() */
-/* debug.addField('ID', () => oldPickNdx.toString()) */
-
 const modelUrl =
   process.env.NODE_ENV === 'development'
     ? './model/model.json'
@@ -79,22 +75,31 @@ async function init() {
     },
   }
 
+  const loadingParent = document.querySelector('.loading__text')
+  const loadingText = loadingParent.firstElementChild as HTMLElement
+
   const gen = new Generator(modelInfo.dcgan64)
-  await gen.load()
+  await gen.load({
+    onProgress: (pct: number) => {
+      const rounded = Math.round(pct * 100)
+      const pctEl = loadingText.firstElementChild as HTMLElement
+      pctEl.innerText = `${rounded}%`
+      if (rounded === 100) {
+        swapClasses(loadingParent.parentElement, 'show', 'hide')
+        document.body.classList.remove('hideOverflow')
+      }
+    },
+  })
 
   const vis = new ModelVis(gen)
   let layers = vis.getActivations(G, program)
 
   /* GUI */
   const gui = new GUI(document.querySelector('.sidebar'))
-  gui.initImageOutput(
-    'base',
-    document.getElementById('model-base-output') as HTMLCanvasElement,
-  )
-  gui.initImageOutput(
-    'output',
-    document.getElementById('model-output') as HTMLCanvasElement,
-  )
+  const base = document.getElementById('model-base-output') as HTMLCanvasElement
+  const output = document.getElementById('model-output') as HTMLCanvasElement
+  gui.initImageOutput('base', base)
+  gui.initImageOutput('output', output)
 
   const random = () => {
     const randBtn = document.querySelector('.rand-btn') as HTMLButtonElement
@@ -149,6 +154,12 @@ async function init() {
       })
     })
   }
+
+  const displayCurrentOutput = () => {
+    const { act } = editor.remakeActivation(layers[layers.length - 1])
+    gen.displayOut(act, gui.output.base)
+  }
+
   const buttons: Button[] = [
     {
       selector: '.rand-btn',
@@ -213,8 +224,6 @@ async function init() {
       })
 
       offset += shape[1]
-
-      /* debug.update() */
     })
     gl.useProgram(program)
     gl.clearColor(0.9, 0.9, 0.9, 1)
@@ -278,6 +287,8 @@ async function init() {
     const { key } = e
     if (key === 'Escape') editor.hideDisplay()
   })
+
+  displayCurrentOutput()
 
   requestAnimationFrame(draw)
   // ------------------------------------

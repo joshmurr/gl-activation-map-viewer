@@ -12,8 +12,8 @@ export default class Model {
     this.info = info
   }
 
-  public async load() {
-    this.model = await tf.loadLayersModel(this.info.url)
+  public async load(opts: { [key: string]: unknown }) {
+    this.model = await tf.loadLayersModel(this.info.url, opts)
     this._loaded = true
   }
 
