@@ -1,0 +1,29 @@
+button {
+  background-color: $mid;
+  border-radius: 3px;
+  padding: 0.6rem 1rem;
+  color: #000;
+  cursor: pointer;
+  text-align: center;
+  box-sizing: border-box;
+  border: 0;
+  font-size: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  filter: $button-border;
+  transition: transform 10ms;
+}
+
+/* button:not(:disabled):focus { */
+button:not(:disabled):hover {
+  background: $dark;
+  filter: $button-pressed;
+  transform: translate($button-offset, $button-offset);
+}
+
+button:disabled {
+  filter: saturate(0.2) opacity(0.5);
+  -webkit-filter: saturate(0.2) opacity(0.5);
+  cursor: not-allowed;
+}

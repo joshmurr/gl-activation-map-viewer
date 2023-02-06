@@ -1,16 +1,15 @@
 import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
-import { ActivationSelection, Button, ModelInfo } from './types'
+import { Accordion, ActivationSelection, Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
-/* import Debug from './Debug' */
 import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
 import { Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
-import './styles.scss'
-import { findLayer, waitForRepaint } from './utils'
+import { findLayer, swapClasses, waitForRepaint } from './utils'
+import './styles/main.scss'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
@@ -58,9 +57,6 @@ const currentActSelection: ActivationSelection = {
   layer: null,
 }
 
-/* const debug = new Debug() */
-/* debug.addField('ID', () => oldPickNdx.toString()) */
-
 const modelUrl =
   process.env.NODE_ENV === 'development'
     ? './model/model.json'
@@ -79,22 +75,37 @@ async function init() {
     },
   }
 
+  const loadingParent = document.querySelector('.loading__text')
+  const loadingText = loadingParent.firstElementChild as HTMLElement
+
   const gen = new Generator(modelInfo.dcgan64)
-  await gen.load()
+  await gen.load({
+    onProgress: (pct: number) => {
+      const rounded = Math.round(pct * 100)
+      const pctEl = loadingText.firstElementChild as HTMLElement
+      pctEl.innerText = `${rounded}%`
+      if (rounded === 100) {
+        swapClasses(loadingParent.parentElement, 'show', 'hide')
+        document.body.classList.remove('hideOverflow')
+      }
+    },
+  })
 
   const vis = new ModelVis(gen)
   let layers = vis.getActivations(G, program)
 
   /* GUI */
   const gui = new GUI(document.querySelector('.sidebar'))
-  gui.initImageOutput(
-    'base',
-    document.getElementById('model-base-output') as HTMLCanvasElement,
-  )
-  gui.initImageOutput(
-    'output',
-    document.getElementById('model-output') as HTMLCanvasElement,
-  )
+  const base = document.getElementById('model-base-output') as HTMLCanvasElement
+  const output = document.getElementById('model-output') as HTMLCanvasElement
+
+  const handleOutputClick = () => {
+    editor.showOutput()
+    displayCurrentOutput(editor.displayCanvas)
+  }
+
+  gui.initImageOutput('base', base, handleOutputClick)
+  gui.initImageOutput('output', output, handleOutputClick)
 
   const random = () => {
     const randBtn = document.querySelector('.rand-btn') as HTMLButtonElement
@@ -149,6 +160,12 @@ async function init() {
       })
     })
   }
+
+  const displayCurrentOutput = (surface: HTMLCanvasElement) => {
+    const { act } = editor.remakeActivation(layers[layers.length - 1])
+    gen.displayOut(act, surface)
+  }
+
   const buttons: Button[] = [
     {
       selector: '.rand-btn',
@@ -162,6 +179,23 @@ async function init() {
     },
   ]
   gui.initButtons(buttons)
+
+  const accordions: Accordion[] = [...new Array(2)].map((_, i) => ({
+    selector: `#section-${i + 1}`,
+    eventListener: 'click',
+    callback: function () {
+      const moreSymbol = this.firstElementChild as HTMLElement
+      moreSymbol.innerText = moreSymbol.innerText === '+' ? '-' : '+'
+      const panel = this.nextElementSibling as HTMLElement
+      if (panel.style.maxHeight) {
+        panel.style.maxHeight = null
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + 'px'
+      }
+    },
+  }))
+
+  gui.initAccordions(accordions)
   /* GUI END */
 
   const editor = new Editor()
@@ -213,8 +247,6 @@ async function init() {
       })
 
       offset += shape[1]
-
-      /* debug.update() */
     })
     gl.useProgram(program)
     gl.clearColor(0.9, 0.9, 0.9, 1)
@@ -278,6 +310,8 @@ async function init() {
     const { key } = e
     if (key === 'Escape') editor.hideDisplay()
   })
+
+  displayCurrentOutput(gui.output.base)
 
   requestAnimationFrame(draw)
   // ------------------------------------

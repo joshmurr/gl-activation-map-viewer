@@ -23,6 +23,12 @@ export interface Slider {
   callback: () => void
 }
 
+export interface Accordion {
+  selector: string
+  eventListener: string
+  callback: () => void
+}
+
 export interface Checkbox {
   name: string
   selector: string

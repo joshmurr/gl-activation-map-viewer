@@ -1,38 +1,72 @@
 <!DOCTYPE html>
 <html>
+  <head></head>
 
-<head></head>
-
-<body>
-  <div id="container">
-    <header>
-      <h1>Activation Map Editor</h1>
-      <div>This will be some intro information.</div>
-    </header>
-    <section class="model-vis full-bleed">
-      <div id="model-vis-container"></div>
-    </section>
-    <section>
-      <div class="sidebar">
-        <div id="buttons">
-          <button class="rand-btn">Random</button>
-          <button class="predict-btn">Predict</button>
-        </div>
-        <div class="sidebar__item">
-          <p class="sidebar__text">Initial Model Output:</p>
-          <canvas id="model-base-output"></canvas>
-        </div>
-        <div class="sidebar__item">
-          <p class="sidebar__text">Edited Model Output:</p>
-          <canvas id="model-output"></canvas>
-        </div>
+  <body class="hideOverflow">
+    <div class="loading__wrapper show">
+      <div class="loading__text">
+        <p>Loading... <span>0%</span></p>
       </div>
-    </section>
-    <section>
-      <h2>More Information</h2>
-      <p>This will be some more useful information.</p>
-    </section>
-  </div>
-</body>
+    </div>
+    <div id="container">
+      <header>
+        <h1>Activation Map Editor</h1>
+        <button id="section-1" class="accordion">
+          Introduction<span class="accordion__more">+</span>
+        </button>
+        <div class="panel">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Lorem ipsum dolor sit amet,
+            consectetur adipisicing elit, sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation ullamco laboris nisi ut aliquip ex ea commodo
+            consequat.
+          </p>
+        </div>
+      </header>
+      <section class="model-vis full-bleed">
+        <div id="model-vis-container"></div>
+        <div class="sidebar">
+          <div class="sidebar__item">
+            <p class="sidebar__text">Model Output:</p>
+            <canvas id="model-base-output"></canvas>
+          </div>
 
+          <!-- <div class="sidebar__item"> -->
+          <!--   <p class="sidebar__text">Selected:</p> -->
+          <!--   <canvas id="selected-output"></canvas> -->
+          <!-- </div> -->
+
+          <div class="sidebar__item">
+            <p class="sidebar__text">Edited Output:</p>
+            <canvas id="model-output"></canvas>
+          </div>
+          <div class="sidebar__buttons">
+            <button class="rand-btn">Random</button>
+            <button class="predict-btn">Predict</button>
+          </div>
+        </div>
+      </section>
+      <section>
+        <button id="section-2" class="accordion">
+          More Information<span class="accordion__more">+</span>
+        </button>
+        <div class="panel">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Lorem ipsum dolor sit amet,
+            consectetur adipisicing elit, sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation ullamco laboris nisi ut aliquip ex ea commodo
+            consequat.
+          </p>
+        </div>
+      </section>
+    </div>
+  </body>
 </html>

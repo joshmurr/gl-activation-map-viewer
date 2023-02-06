@@ -32,6 +32,13 @@
   "dependencies": {
     "@tensorflow/tfjs": "^3.19.0",
     "gl-handler": "^1.0.10",
-    "gl-matrix": "^3.4.3"
+    "gl-matrix": "^3.4.3",
+    "include-media": "^2.0.0"
+  },
+  "sass": {
+    "includePaths": [
+      "src/styles",
+      "./node_modules"
+    ]
   }
 }

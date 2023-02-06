@@ -102,3 +102,8 @@ export const waitForRepaint = (callback: () => void) => {
     requestAnimationFrame(() => callback())
   })
 }
+
+export const swapClasses = (el: HTMLElement, remove: string, add: string) => {
+  el.classList.remove(remove)
+  el.classList.add(add)
+}

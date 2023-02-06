@@ -1,0 +1,22 @@
+$lightgrey: #eee;
+$darkgrey: #ddd;
+$dark: #6096b4;
+$dark-dark: #4b819e;
+$mid: #93bfcf;
+$grey: #bdcdd6;
+$light: #eee9da;
+$accent: #d47970;
+$accent-dark: #3f7491;
+
+$shadow-offset: 0.1rem;
+$button-offset: 0.05rem;
+$shadow: drop-shadow($shadow-offset $shadow-offset 0.08rem black);
+$shadow-pressed: drop-shadow($shadow-offset $shadow-offset 0.005rem black);
+$button-border: drop-shadow($shadow-offset $shadow-offset 0.08rem $dark);
+$button-pressed: drop-shadow($shadow-offset $shadow-offset 0.005rem $dark-dark);
+
+/* $breakpoints: ( */
+/*   'phone': 320px, */
+/*   'tablet': 768px, */
+/*   'desktop': 1024px, */
+/* ) !default; */
