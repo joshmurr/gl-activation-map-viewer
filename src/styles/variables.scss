@@ -1,0 +1,16 @@
+$dark: #6096b4;
+$mid: #93bfcf;
+$grey: #bdcdd6;
+$light: #eee9da;
+$accent: #a7727d;
+
+$shadow-offset: 0.1rem;
+$button-offset: 0.05rem;
+$shadow: drop-shadow($shadow-offset $shadow-offset 0.08rem black);
+$button-border: drop-shadow($shadow-offset $shadow-offset 0.08rem $dark);
+
+/* $breakpoints: ( */
+/*   'phone': 320px, */
+/*   'tablet': 768px, */
+/*   'desktop': 1024px, */
+/* ) !default; */

@@ -37,6 +37,7 @@
   },
   "sass": {
     "includePaths": [
+      "src/styles",
       "./node_modules"
     ]
   }

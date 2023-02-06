@@ -9,7 +9,7 @@ import { Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import { findLayer, swapClasses, waitForRepaint } from './utils'
-import './styles.scss'
+import './styles/main.scss'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
