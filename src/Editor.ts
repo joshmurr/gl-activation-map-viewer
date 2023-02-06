@@ -4,6 +4,7 @@ import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
 import { fill, rect, rotate, scale } from './transformations'
 import { act2ImageData } from './conversions'
 import { TypedArray } from './typedArrays'
+import { swapClasses } from './utils'
 
 type Callback = (e?: MouseEvent) => void
 type NamedCallback = [name: string, cb: Callback]
@@ -46,8 +47,6 @@ export default class Editor {
     this.editor.id = 'editor'
     const editorWrapper = document.createElement('div')
     editorWrapper.classList.add('editor-wrapper')
-
-    this.hideDisplay()
 
     this.tools = document.createElement('div')
     this.tools.id = 'tools'
@@ -122,7 +121,7 @@ export default class Editor {
       {
         name: 'brush',
         eventListener: 'change',
-        label: 'Brush Size',
+        label: 'Brush Size:',
         min: 1,
         max: 12,
         step: 1,
@@ -141,7 +140,7 @@ export default class Editor {
       {
         name: 'scale',
         eventListener: 'change',
-        label: 'Scale Factor',
+        label: 'Scale Factor:',
         min: 0.5,
         max: 2,
         step: 0.1,
@@ -207,8 +206,10 @@ export default class Editor {
 
     this.editor.appendChild(editorWrapper)
 
-    document.body.appendChild(this.tooltipCont)
+    this.tools.appendChild(this.tooltipCont)
+
     document.body.appendChild(this.editor)
+    this.hideDisplay()
   }
 
   public show(currentAct: ActivationSelection) {
@@ -317,8 +318,7 @@ export default class Editor {
   }
 
   private showDisplay() {
-    this.editor.classList.remove('hide')
-    this.editor.classList.add('show')
+    swapClasses(this.editor, 'hide', 'show')
     this.overlayCanvas.addEventListener('click', (e) => this.draw(e))
     this.overlayCanvas.addEventListener('mousemove', (e) => this.drawBrush(e))
 
@@ -327,8 +327,8 @@ export default class Editor {
   }
 
   public hideDisplay() {
-    this.editor.classList.add('hide')
-    this.editor.classList.remove('show')
+    swapClasses(this.editor, 'show', 'hide')
+    this.toggleApplyToAll(false)
     if (this.canvas) {
       this.canvas.removeEventListener('click', this.draw)
     }
@@ -402,7 +402,8 @@ export default class Editor {
 
     this.overlayCtx.beginPath()
     this.overlayCtx.clearRect(0, 0, width, height)
-    this.overlayCtx.strokeStyle = 'rgba(255,0,0,0.5)'
+    this.overlayCtx.strokeStyle = 'rgba(255,0,0,0.8)'
+    this.overlayCtx.lineWidth = 1
     this.overlayCtx.rect(
       x,
       y,
@@ -504,20 +505,19 @@ export default class Editor {
     return scale
   }
 
-  private toggleApplyToAll() {
-    this._applyToAll = !this._applyToAll
+  private toggleApplyToAll(force?: boolean) {
+    this._applyToAll = typeof force === 'boolean' ? force : !this._applyToAll
+    console.log(`applyToAll: ${this._applyToAll}`)
     document.getElementById('all').classList.toggle('active', this._applyToAll)
   }
 
   private showTooltip(message: string) {
     this.tooltipCont.innerText = message
-    this.tooltipCont.classList.remove('hide')
-    this.tooltipCont.classList.add('show')
+    swapClasses(this.tooltipCont, 'hide', 'show')
   }
 
   private hideTooltip() {
-    this.tooltipCont.classList.remove('show')
-    this.tooltipCont.classList.add('hide')
+    swapClasses(this.tooltipCont, 'show', 'hide')
   }
 
   private updateTooltip(event: MouseEvent) {

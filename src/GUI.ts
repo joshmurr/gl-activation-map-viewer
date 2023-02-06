@@ -1,4 +1,4 @@
-import { Button, Checkbox, DropdownOpts, Slider } from './types'
+import { Accordion, Button, Checkbox, DropdownOpts, Slider } from './types'
 
 export default class GUI {
   private container: HTMLElement
@@ -47,6 +47,13 @@ export default class GUI {
       const sliderEl = document.querySelector(`input[name="${name}"]`)
       sliderEl.addEventListener(eventListener, callback)
       this._sliders[name] = sliderEl as HTMLInputElement
+    })
+  }
+
+  public initAccordions(accordions: Accordion[]) {
+    accordions.forEach(({ selector, eventListener, callback }) => {
+      const accordionBtn = document.querySelector(selector)
+      accordionBtn.addEventListener(eventListener, callback)
     })
   }
 

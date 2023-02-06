@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
-import { ActivationSelection, Button, ModelInfo } from './types'
+import { Accordion, ActivationSelection, Button, ModelInfo } from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
@@ -173,6 +173,24 @@ async function init() {
     },
   ]
   gui.initButtons(buttons)
+
+  const accordions: Accordion[] = [...new Array(2)].map((_, i) => ({
+    selector: `#section-${i + 1}`,
+    eventListener: 'click',
+    callback: function () {
+      this.classList.toggle('accordion-active')
+      const panel = this.nextElementSibling as HTMLElement
+      if (panel.style.maxHeight) {
+        panel.style.maxHeight = null
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + 'px'
+      }
+    },
+  }))
+
+  console.log(accordions)
+
+  gui.initAccordions(accordions)
   /* GUI END */
 
   const editor = new Editor()

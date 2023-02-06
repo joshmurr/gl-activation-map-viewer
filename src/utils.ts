@@ -103,7 +103,7 @@ export const waitForRepaint = (callback: () => void) => {
   })
 }
 
-export const swapClasses = (el: HTMLElement, a: string, b: string) => {
-  el.classList.remove(a)
-  el.classList.add(b)
+export const swapClasses = (el: HTMLElement, remove: string, add: string) => {
+  el.classList.remove(remove)
+  el.classList.add(add)
 }
