@@ -73,7 +73,11 @@ export default class GUI {
     })
   }
 
-  public initImageOutput(ref: string, canvasEl?: HTMLCanvasElement) {
+  public initImageOutput(
+    ref: string,
+    canvasEl?: HTMLCanvasElement,
+    callback?: () => void,
+  ) {
     const outputContainer = document.createElement('div')
     outputContainer.classList.add('model-output')
 
@@ -83,6 +87,8 @@ export default class GUI {
       outputContainer.appendChild(canvas)
       this.sidebar.appendChild(outputContainer)
     }
+
+    if (callback) canvas.addEventListener('click', callback)
 
     this.outputSurfaces[ref] = canvas
   }

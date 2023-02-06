@@ -94,6 +94,8 @@ h6 {
 
         image-rendering: crisp-edges; /* for firefox */
         image-rendering: pixelated; /* for everything else */
+
+        cursor: pointer;
       }
     }
     &__buttons {
@@ -187,11 +189,15 @@ h6 {
 }
 
 .hide {
-  display: none;
+  display: none !important;
 }
 
 .show {
   display: block;
+}
+
+.flex {
+  display: flex;
 }
 
 .active {

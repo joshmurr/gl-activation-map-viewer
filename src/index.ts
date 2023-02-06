@@ -98,8 +98,14 @@ async function init() {
   const gui = new GUI(document.querySelector('.sidebar'))
   const base = document.getElementById('model-base-output') as HTMLCanvasElement
   const output = document.getElementById('model-output') as HTMLCanvasElement
-  gui.initImageOutput('base', base)
-  gui.initImageOutput('output', output)
+
+  const handleOutputClick = () => {
+    editor.showOutput()
+    displayCurrentOutput(editor.displayCanvas)
+  }
+
+  gui.initImageOutput('base', base, handleOutputClick)
+  gui.initImageOutput('output', output, handleOutputClick)
 
   const random = () => {
     const randBtn = document.querySelector('.rand-btn') as HTMLButtonElement
@@ -155,9 +161,9 @@ async function init() {
     })
   }
 
-  const displayCurrentOutput = () => {
+  const displayCurrentOutput = (surface: HTMLCanvasElement) => {
     const { act } = editor.remakeActivation(layers[layers.length - 1])
-    gen.displayOut(act, gui.output.base)
+    gen.displayOut(act, surface)
   }
 
   const buttons: Button[] = [
@@ -178,7 +184,8 @@ async function init() {
     selector: `#section-${i + 1}`,
     eventListener: 'click',
     callback: function () {
-      this.classList.toggle('accordion-active')
+      const moreSymbol = this.firstElementChild as HTMLElement
+      moreSymbol.innerText = moreSymbol.innerText === '+' ? '-' : '+'
       const panel = this.nextElementSibling as HTMLElement
       if (panel.style.maxHeight) {
         panel.style.maxHeight = null
@@ -187,8 +194,6 @@ async function init() {
       }
     },
   }))
-
-  console.log(accordions)
 
   gui.initAccordions(accordions)
   /* GUI END */
@@ -306,7 +311,7 @@ async function init() {
     if (key === 'Escape') editor.hideDisplay()
   })
 
-  displayCurrentOutput()
+  displayCurrentOutput(gui.output.base)
 
   requestAnimationFrame(draw)
   // ------------------------------------
