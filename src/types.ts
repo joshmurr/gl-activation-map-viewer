@@ -1,5 +1,3 @@
-/* import * as tf from '@tensorflow/tfjs' */
-import { Quad as GLQuad } from 'gl-handler'
 import type Quad from './Quad'
 
 export interface ModelInfo {
@@ -47,30 +45,11 @@ export interface PixelData {
 
 export type DrawCallback = (k: string, data: PixelData) => void
 
-export interface ActivationStore {
-  [key: string]: { [key: string]: any }
-}
-
-export interface QuadInfo {
-  mesh: GLQuad
-  uid: number[]
-  uniforms: { [key: string]: any }
-  animations: { [key: string]: any }
-  data: Float32Array
-}
-
-export interface ActivationInfo {
-  data: Float32Array
-  quad: QuadInfo
-}
-
 export interface LayerInfo {
   name: string
   shape: number[]
   activations: Quad[]
 }
-
-export type Activations = ActivationInfo[]
 
 export interface ActivationSelection {
   id: number

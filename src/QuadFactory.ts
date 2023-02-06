@@ -26,7 +26,7 @@ export default class QuadFactory {
 
     const uid = this.generateColourUid(quadIdx + offset, 3)
 
-    const [w, h] = this.shape.slice(2)
+    const [w, h] = this.shape
     const texture = this.G.createTexture(w, h, {
       type: 'R32F',
       data: data,

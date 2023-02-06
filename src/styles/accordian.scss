@@ -28,4 +28,8 @@
   overflow: hidden;
   max-height: 0;
   transition: max-height 0.4s ease-out;
+
+  img {
+    width: 100%;
+  }
 }

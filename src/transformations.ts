@@ -116,7 +116,6 @@ export const fill = (
   height: number,
   color: number,
 ): Float32Array => {
-  console.log(color)
   return input.fill(color)
 }
 
@@ -143,15 +142,3 @@ export const rect = (
 
   return input
 }
-
-/* export const rotateImageData = (image: ImageData, angle: number) => {
-  const { width, height, data } = image
-
-  const rawData = convert(data, rgba2r, Float32Array)
-  const rotatedData = rotate(rawData, width, height, angle)
-
-  const newImageData = new ImageData(width, height)
-  newImageData.data.set(newData, 0)
-
-  return newImageData
-} */

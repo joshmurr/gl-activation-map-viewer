@@ -50,6 +50,10 @@ module.exports = {
           from: 'src/model',
           to: 'model',
         },
+        {
+          from: 'src/assets',
+          to: 'assets',
+        },
       ],
     }),
   ],
