@@ -189,7 +189,7 @@ async function init() {
   ]
   gui.initButtons(buttons)
 
-  const accordions: Accordion[] = [...new Array(2)].map((_, i) => ({
+  const accordions: Accordion[] = [...new Array(3)].map((_, i) => ({
     selector: `#section-${i + 1}`,
     eventListener: 'click',
     callback: function () {

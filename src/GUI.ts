@@ -9,7 +9,8 @@ export default class GUI {
   private _sliders: { [key: string]: HTMLInputElement }
 
   constructor(sidebarEl: HTMLElement) {
-    this.container = document.getElementById('container')
+    this.container = document.querySelector('.container')
+    console.log(this.container)
     this.display = document.createElement('div')
     this.display.classList.add('display')
     this.sidebar = sidebarEl

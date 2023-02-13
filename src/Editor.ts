@@ -419,7 +419,7 @@ export default class Editor {
   private drawBrush(event: MouseEvent) {
     const { width: sWidth } = this.canvas
     const { width, height } = this.overlayCanvas
-    const scale = this.screenScale(sWidth) / 10
+    const scale = this.screenScale(sWidth) / this._overlayGridScaleFactor
 
     const { left, top } = this.overlayCanvas.getBoundingClientRect()
     const x =

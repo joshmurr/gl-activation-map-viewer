@@ -8,24 +8,26 @@
         <p>Loading... <span>0%</span></p>
       </div>
     </div>
-    <div id="container">
+    <div class="container">
       <header>
         <h1>Activation Map Editor</h1>
         <button id="section-1" class="accordion">
-          Introduction<span class="accordion__more">+</span>
+          TL;DR<span class="accordion__more">+</span>
         </button>
         <div class="panel">
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat. Lorem ipsum dolor sit amet,
-            consectetur adipisicing elit, sed do eiusmod tempor incididunt ut
-            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo
-            consequat.
+            In short, this is an experiment in finding new ways of interacting
+            with generative machine learning models. It is a tool which exposes
+            the inner workings of a Convolutional Neural Network and allows you
+            to edit the intermediary activation maps and re-run the model to
+            observe how this affects the output.
           </p>
-          <img src="assets/dcgan-block-diagram.png" alt="DCGAN Block Diagram" />
+          <p>
+            Try clicking on a slice of an activation map below to open up the
+            editor. Once you have made a change close the editor and clicking
+            <span class="btn">Predict</span> in the sidebar to run the model.
+          </p>
+          <p><a href="#section-2">See below for more information.</a></p>
         </div>
       </header>
       <section class="model-vis full-bleed">
@@ -51,21 +53,101 @@
           </div>
         </div>
       </section>
-      <section>
+      <section class="full-bleed container">
         <button id="section-2" class="accordion">
+          What is this?<span class="accordion__more">+</span>
+        </button>
+        <div class="panel full-bleed container">
+          <p>
+            Machine learning models are often considered black boxes - abstract
+            entities which have internal processes which can often only be
+            understood by observing the output relative to a given input.
+          </p>
+          <p>
+            Machine learning papers often try to address this with large block
+            diagrams which represent the inner workings of the model. The
+            diagrams aim to join the dots from input to output showing the
+            reader how data is transformed from start to finished. For example
+            see the the diagram used in
+            <a href="https://arxiv.org/abs/1511.06434"
+              >Unsupervised Representation Learning with Deep Convolutional
+              Generative Adversarial Networks </a
+            >, the original DCGAN paper by Radford et al.
+          </p>
+          <img src="assets/dcgan-block-diagram.png" alt="DCGAN Block Diagram" />
+          <a class="panel__attribution" href="https://arxiv.org/abs/1511.06434"
+            >Source</a
+          >
+          <p>
+            The diagram above does successfully describe the transformation of
+            data through the model (with the accompanying description in the
+            paper). Below I have annoted the diagram to fill you in.
+          </p>
+          <img
+            src="assets/dcgan-diagram-labelled.png"
+            alt="DCGAN Block Diagram Labelled"
+            class="full-bleed"
+          />
+          <p>
+            These diagrams are immensely useful in understanding the overall
+            shape of the model, particularly if you aim to reproduce the model
+            or expand upon the model. But more often than not they just
+            illustrate all the data which is generally considered off limits.
+            The output of the model is often the most interesting part of the
+            model, but what if we could manipulate the inner-representations of
+            the model as well? How would this affect the output? The weights are
+            stored in the transformation layers and remain frozen (for now), but
+            what if we could reach in and mess around with the data as it moves
+            through the model?
+          </p>
+          <p>
+            That's what this demo aims to do. It gives you access the the
+            activation maps stored within the model and allows you to pull out a
+            slice to edit it as you would like. You can draw on it by clicking,
+            holding shift darkens; you can fill the slice with a colour; rotate
+            it; scale it and you can apply these edits to the whole activation
+            map if you want.
+          </p>
+          <p>
+            Initially you might not get exciting results, but the effects you
+            have are very different if the changes are made near the input of
+            the model as opposed to the output. In the early layers of a model
+            like this the changes are quite <i>high level</i>. By these we mean
+            larger more abstract concepts are put in place, like the size and
+            shape of the face, the large colour groups, the postion of the face
+            and so on. Whereas the later layers generally make impacts and a
+            <i>lower level</i>. This can be thought of as getting closer to
+            pixel level where changes are very local and may just affect sublte
+            patterns found in the hair for example.
+          </p>
+        </div>
+      </section>
+      <section class="full-bleed container">
+        <button id="section-3" class="accordion">
           More Information<span class="accordion__more">+</span>
         </button>
-        <div class="panel">
+        <div class="panel full-bleed container">
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat. Lorem ipsum dolor sit amet,
-            consectetur adipisicing elit, sed do eiusmod tempor incididunt ut
-            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo
-            consequat.
+            This idea was originally called <em>Network Bending</em> and it is a
+            process developed by Broad, Leymarie and Grierson in
+            <a href="https://arxiv.org/abs/2005.12420"
+              >Network Bending: Expressive Manipulation of Deep Generative
+              Models</a
+            >. The authors take the same approach in that they make
+            transformations to the activation maps within a generative model,
+            but make the changes in a more programmatic way. The effect on the
+            model is fascinating however as the model in question (<a
+              href="https://arxiv.org/abs/1912.04958"
+              >StyleGAN2</a
+            >) is much larger than the one used here.
           </p>
+          <img
+            src="assets/network-bending-output.png"
+            alt="Netowork bending output"
+          />
+          <a class="panel__attribution" href="https://arxiv.org/abs/1912.04958"
+            >Source</a
+          >
         </div>
       </section>
     </div>

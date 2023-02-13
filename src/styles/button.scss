@@ -1,3 +1,4 @@
+.btn,
 button {
   background-color: $mid;
   border-radius: 3px;
@@ -26,4 +27,10 @@ button:disabled {
   filter: saturate(0.2) opacity(0.5);
   -webkit-filter: saturate(0.2) opacity(0.5);
   cursor: not-allowed;
+}
+
+.btn {
+  font-size: small;
+  padding: 0.2rem 0.33rem;
+  cursor: text;
 }

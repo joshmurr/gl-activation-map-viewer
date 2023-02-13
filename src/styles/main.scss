@@ -6,6 +6,7 @@
 
 html {
   box-sizing: border-box;
+  scroll-behavior: smooth;
 }
 *,
 *:after,
@@ -31,13 +32,12 @@ h6 {
   text-align: center;
 }
 
-#container {
+.container {
   display: grid;
   gap: 0;
   grid-template-columns: 1fr min(72ch, 100%) 1fr;
 
   & > * {
-    display: block;
     grid-column: 2;
   }
 }
@@ -247,4 +247,9 @@ h6 {
 
 .hideOverflow {
   overflow: hidden;
+}
+
+section {
+  &__inner {
+  }
 }
