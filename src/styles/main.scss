@@ -45,11 +45,12 @@ h6 {
 .full-bleed {
   width: 100%;
   grid-column: 1 / -1 !important;
-  margin: 1em 0;
+  margin: 0.5em 0 0.5em 0;
 }
 
 .model-vis {
   position: relative;
+  padding-top: 0.6em;
 
   #model-vis-container {
     canvas {
