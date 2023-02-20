@@ -212,7 +212,7 @@ async function init() {
   function draw(time: number) {
     // PICKING ----------------------
     gl.useProgram(pickProgram)
-    gl.clearColor(0.9, 0.9, 0.9, 1)
+    gl.clearColor(1, 1, 1, 1)
     gl.bindFramebuffer(gl.FRAMEBUFFER, pickingFbo)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
@@ -258,7 +258,7 @@ async function init() {
       offset += shape[1]
     })
     gl.useProgram(program)
-    gl.clearColor(0.9, 0.9, 0.9, 1)
+    gl.clearColor(0.95, 0.96, 0.98, 1)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)

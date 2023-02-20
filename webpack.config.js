@@ -1,9 +1,12 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+const devMode = process.env.NODE_ENV !== 'production'
 
 module.exports = {
-  mode: process.env.NODE_ENV !== 'development' ? 'production' : 'development',
+  mode: devMode ? 'development' : 'production',
   entry: {
     activations: './src/index.ts',
   },
@@ -30,8 +33,12 @@ module.exports = {
         },
       },
       {
-        test: /\.s[ac]ss$/i,
-        use: ['style-loader', 'css-loader', 'sass-loader'],
+        test: /\.(sa|sc|c)ss$/,
+        use: [
+          devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
+          'css-loader',
+          'sass-loader',
+        ],
       },
     ],
   },
@@ -42,7 +49,6 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: 'Activation Map Editor',
       template: './index.html',
-      inject: 'body',
     }),
     new CopyWebpackPlugin({
       patterns: [
@@ -56,5 +62,17 @@ module.exports = {
         },
       ],
     }),
-  ],
+  ].concat(
+    devMode
+      ? []
+      : [
+          new MiniCssExtractPlugin({
+            filename: '[name].css',
+            chunkFilename: '[id].css',
+          }),
+        ],
+  ),
+  optimization: {
+    minimizer: [`...`, new CssMinimizerPlugin()],
+  },
 }
