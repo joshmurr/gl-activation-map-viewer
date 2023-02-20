@@ -1,6 +1,6 @@
 .btn,
 button {
-  background-color: $mid;
+  background-color: $slate-200;
   border-radius: 3px;
   padding: 0.6rem 1rem;
   color: #000;
@@ -18,7 +18,7 @@ button {
 
 /* button:not(:disabled):focus { */
 button:not(:disabled):hover {
-  background: $dark;
+  background: $slate-400;
   filter: $button-pressed;
   transform: translate($button-offset, $button-offset);
 }

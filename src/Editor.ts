@@ -55,7 +55,7 @@ export default class Editor {
 
     const buttons = [
       {
-        text: 'X',
+        text: '&check;',
         parent: this.editor,
         id: 'close',
         callbacks: [['click', () => this.hideDisplay()]],

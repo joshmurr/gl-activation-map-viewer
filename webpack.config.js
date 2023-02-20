@@ -42,7 +42,21 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: 'Activation Map Editor',
       template: './index.html',
-      inject: 'body',
+      inject: 'head',
+      files: {
+        css: ['[name].bundle.css'],
+        js: ['[name].bundle.js'],
+        chunks: {
+          head: {
+            entry: '',
+            css: '[name].bundle.css',
+          },
+          main: {
+            entry: '[name].bundle.js',
+            css: [],
+          },
+        },
+      },
     }),
     new CopyWebpackPlugin({
       patterns: [
