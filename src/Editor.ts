@@ -481,7 +481,8 @@ export default class Editor {
       return tf.tensor(quad.data).reshape([w, h, 1, 1]).squeeze()
     })
 
-    const act = tf.stack(layerTensors).expandDims(0)
+    const axis = data_format === 'channels_first' ? 0 : -1
+    const act = tf.stack(layerTensors, axis).expandDims(0)
 
     return { layer, act }
   }

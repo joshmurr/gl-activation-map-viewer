@@ -34,5 +34,6 @@ export default class Model {
   public dispose() {
     this.model.dispose()
     tf.disposeVariables()
+    tf.dispose()
   }
 }

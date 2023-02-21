@@ -56,12 +56,6 @@ let mouseX = -1
 let mouseY = -1
 let mouseOnSlice = false
 let oldPickNdx = -1
-const currentActSelection: ActivationSelection = {
-  id: -1,
-  relativeId: -1,
-  layerName: 'none',
-  layer: null,
-}
 
 let gen: Generator
 
@@ -82,7 +76,7 @@ const modelInfo: { [key: string]: ModelInfo } = {
     url: './model/dcgan_128/model.json',
     size: 128,
     latent_dim: 100,
-    draw_multiplier: 2,
+    draw_multiplier: 4,
     data_format: 'channels_last',
   },
 }
@@ -98,6 +92,13 @@ const vis = new ModelVis()
 let initialAct: Tensor | null = null
 
 async function init(chosenModel: keyof ModelInfo) {
+const currentActSelection: ActivationSelection = {
+  id: -1,
+  relativeId: -1,
+  layerName: 'none',
+  layer: null,
+}
+
   // MODEL ------------------------------
 
   const loadingParent = document.querySelector('.loading__text')
@@ -128,7 +129,9 @@ async function init(chosenModel: keyof ModelInfo) {
       MODEL_INFO.data_format,
     )
     editor.showOutput(w, h)
-    gen.displayOut(initialAct, editor.displayCanvas)
+    if (MODEL_INFO.data_format === 'channels_first')
+      gen.displayOutTranspose(initialAct, editor.displayCanvas)
+    else gen.displayOut(initialAct, editor.displayCanvas)
   }
 
   const handleOutputClick = () => {
@@ -162,7 +165,9 @@ async function init(chosenModel: keyof ModelInfo) {
       vis.update(currentZ)
       layers = vis.getActivations(G, program, MODEL_INFO)
       initialAct = logits
-      gen.displayOut(logits, gui.output.base)
+      if (MODEL_INFO.data_format === 'channels_first')
+        gen.displayOutTranspose(logits, gui.output.base)
+      else gen.displayOut(logits, gui.output.base)
       randBtn.innerText = 'Random'
     })
   }
@@ -193,10 +198,12 @@ async function init(chosenModel: keyof ModelInfo) {
         const layerOffset = Math.abs(tfLayers.length - layers.length)
         for ({ logits, layerIdx } of activations) {
           const layer = layers[layerIdx - layerOffset]
-          vis.putActivations(layer, logits)
+          vis.putActivations(layer, logits, MODEL_INFO)
         }
 
-        gen.displayOut(logits, gui.output.output)
+        if (MODEL_INFO.data_format === 'channels_first')
+          gen.displayOutTranspose(logits, gui.output.output)
+        else gen.displayOut(logits, gui.output.output)
         predictBtn.innerText = 'Predict'
       })
     })
@@ -357,7 +364,10 @@ async function init(chosenModel: keyof ModelInfo) {
 
   const { act } = editor.remakeActivation(layers[layers.length - 1], MODEL_INFO)
   initialAct = act
-  gen.displayOut(act, gui.output.base)
+
+  if (MODEL_INFO.data_format === 'channels_first')
+    gen.displayOutTranspose(act, gui.output.base)
+  else gen.displayOut(act, gui.output.base)
 
   requestAnimationFrame(draw)
   // ------------------------------------
@@ -369,4 +379,4 @@ function loadModel() {
   init(choice)
 }
 
-init('dcgan128')
+init('dcgan64')

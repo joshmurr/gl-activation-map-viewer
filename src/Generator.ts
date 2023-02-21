@@ -28,12 +28,21 @@ export default class Generator extends Model {
       .reshape([size * draw_multiplier, size * draw_multiplier, 3])
   }
 
-  public display(logits: tf.Tensor, canvas: HTMLCanvasElement) {
-    const outputImg = logits.squeeze().reshape([28, 28]) as tf.Tensor2D
-    tf.browser.toPixels(outputImg, canvas)
+  public async displayOut(logits: tf.Tensor, canvas: HTMLCanvasElement) {
+    const y = tf.tidy(() => {
+      const y = logits
+        .squeeze()
+        .div(tf.scalar(2))
+        .add(tf.scalar(0.5)) as tf.Tensor2D
+      return this.image_enlarge(y, this.info.draw_multiplier)
+    }) as tf.Tensor2D
+    await tf.browser.toPixels(y, canvas)
   }
 
-  public async displayOut(logits: tf.Tensor, canvas: HTMLCanvasElement) {
+  public async displayOutTranspose(
+    logits: tf.Tensor,
+    canvas: HTMLCanvasElement,
+  ) {
     const y = tf.tidy(() => {
       const y = logits
         .squeeze()

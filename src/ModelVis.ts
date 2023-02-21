@@ -4,6 +4,7 @@ import { LayerInfo, ModelInfo } from './types'
 import QuadFactory from './QuadFactory'
 import type Generator from './Generator'
 import { getLayerDims } from './utils'
+
 export default class ModelVis {
   private _tfLayers: tf.layers.Layer[]
   private layerOutputs: { [key: string]: tf.Tensor }
@@ -11,8 +12,6 @@ export default class ModelVis {
   private _layers: LayerInfo[] = []
   private numTensors = 0
   private model: Generator
-
-  constructor() {}
 
   public init(model: Generator) {
     this.model = model
@@ -79,7 +78,6 @@ export default class ModelVis {
         return
       }
 
-      /* const [w, h] = layer.shape.length < 3 ? [1, 1] : layer.shape.slice(2) */
       const [w, h] = getLayerDims(layer.shape, data_format)
 
       const layerInfo: LayerInfo = {
@@ -97,7 +95,7 @@ export default class ModelVis {
           data,
           actIdx,
           layerIdx,
-          sepActs.length,
+          this.layerNames.length,
           offset,
         )
         layerInfo.activations.push(activation)
@@ -112,8 +110,12 @@ export default class ModelVis {
     return this._layers
   }
 
-  public putActivations(layer: LayerInfo, act: tf.Tensor) {
-    const sepActs = this.separateActivations(act)
+  public putActivations(
+    layer: LayerInfo,
+    act: tf.Tensor,
+    { data_format }: ModelInfo,
+  ) {
+    const sepActs = this.separateActivations(act, data_format)
     sepActs.forEach((act, actIdx) => {
       const data = act.dataSync()
       const quad = layer.activations[actIdx]

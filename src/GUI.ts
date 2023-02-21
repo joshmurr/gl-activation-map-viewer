@@ -10,7 +10,6 @@ export default class GUI {
 
   constructor(sidebarEl: HTMLElement) {
     this.container = document.querySelector('.container')
-    console.log(this.container)
     this.display = document.createElement('div')
     this.display.classList.add('display')
     this.sidebar = sidebarEl
