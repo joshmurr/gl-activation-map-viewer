@@ -30,4 +30,9 @@ export default class Model {
   get loaded() {
     return this._loaded
   }
+
+  public dispose() {
+    this.model.dispose()
+    tf.disposeVariables()
+  }
 }

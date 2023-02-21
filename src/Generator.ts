@@ -34,7 +34,6 @@ export default class Generator extends Model {
   }
 
   public async displayOut(logits: tf.Tensor, canvas: HTMLCanvasElement) {
-    console.log(logits)
     const y = tf.tidy(() => {
       const y = logits
         .squeeze()

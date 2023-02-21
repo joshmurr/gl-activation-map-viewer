@@ -15,6 +15,11 @@ export interface Button {
   callback: () => void
 }
 
+export interface Dropdown {
+  selector: string
+  callback: () => void
+}
+
 export interface Slider {
   name: string
   eventListener: string

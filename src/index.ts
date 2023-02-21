@@ -1,6 +1,12 @@
 import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
-import { Accordion, ActivationSelection, Button, ModelInfo } from './types'
+import {
+  Accordion,
+  ActivationSelection,
+  Button,
+  Dropdown,
+  ModelInfo,
+} from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
@@ -57,36 +63,50 @@ const currentActSelection: ActivationSelection = {
   layer: null,
 }
 
-async function init() {
+let gen: Generator
+
+const modelInfo: { [key: string]: ModelInfo } = {
+  dcgan64: {
+    description: 'DCGAN, 64x64 (16 MB)',
+    url:
+      process.env.NODE_ENV === 'development'
+        ? './model/dcgan_64/model.json'
+        : 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json',
+    size: 64,
+    latent_dim: 128,
+    draw_multiplier: 4,
+    data_format: 'channels_first',
+  },
+  dcgan128: {
+    description: 'DCGAN, 128x128',
+    url: './model/dcgan_128/model.json',
+    size: 128,
+    latent_dim: 100,
+    draw_multiplier: 2,
+    data_format: 'channels_last',
+  },
+}
+
+const gui = new GUI(document.querySelector('.sidebar'))
+const base = document.getElementById('model-base-output') as HTMLCanvasElement
+const output = document.getElementById('model-output') as HTMLCanvasElement
+
+const editor = new Editor()
+
+const vis = new ModelVis()
+
+let initialAct: Tensor | null = null
+
+async function init(chosenModel: keyof ModelInfo) {
   // MODEL ------------------------------
-  const modelInfo: { [key: string]: ModelInfo } = {
-    dcgan64: {
-      description: 'DCGAN, 64x64 (16 MB)',
-      url:
-        process.env.NODE_ENV === 'development'
-          ? './model/dcgan_64/model.json'
-          : 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json',
-      size: 64,
-      latent_dim: 128,
-      draw_multiplier: 4,
-      data_format: 'channels_first',
-    },
-    dcgan128: {
-      description: 'DCGAN, 128x128 (16 MB)',
-      url: './model/dcgan_128/model.json',
-      size: 128,
-      latent_dim: 100,
-      draw_multiplier: 2,
-      data_format: 'channels_last',
-    },
-  }
 
   const loadingParent = document.querySelector('.loading__text')
   const loadingText = loadingParent.firstElementChild as HTMLElement
 
-  const MODEL_INFO = modelInfo.dcgan128
+  const MODEL_INFO = modelInfo[chosenModel]
 
-  const gen = new Generator(MODEL_INFO)
+  if (gen) gen.dispose()
+  gen = new Generator(MODEL_INFO)
   await gen.load({
     onProgress: (pct: number) => {
       const rounded = Math.round(pct * 100)
@@ -98,17 +118,10 @@ async function init() {
       }
     },
   })
-
-  const vis = new ModelVis(gen)
+  vis.init(gen)
   let layers = vis.getActivations(G, program, MODEL_INFO)
 
   /* GUI */
-  const gui = new GUI(document.querySelector('.sidebar'))
-  const base = document.getElementById('model-base-output') as HTMLCanvasElement
-  const output = document.getElementById('model-output') as HTMLCanvasElement
-
-  let initialAct: Tensor | null = null
-
   const handleInitialOutputClick = () => {
     const [w, h] = getLayerDims(
       layers[layers.length - 1].shape,
@@ -203,6 +216,15 @@ async function init() {
   ]
   gui.initButtons(buttons)
 
+  const dropdowns: Dropdown[] = [
+    {
+      selector: 'model-selection',
+      callback: loadModel,
+    },
+  ]
+  gui.initDropdown(dropdowns)
+  gui.populateDropdown('model-selection', Object.keys(modelInfo), chosenModel)
+
   const accordions: Accordion[] = [...new Array(3)].map((_, i) => ({
     selector: `#section-${i + 1}`,
     eventListener: 'click',
@@ -220,8 +242,6 @@ async function init() {
 
   gui.initAccordions(accordions)
   /* GUI END */
-
-  const editor = new Editor()
 
   function draw(time: number) {
     // PICKING ----------------------
@@ -337,11 +357,16 @@ async function init() {
 
   const { act } = editor.remakeActivation(layers[layers.length - 1], MODEL_INFO)
   initialAct = act
-  console.log(initialAct)
   gen.displayOut(act, gui.output.base)
 
   requestAnimationFrame(draw)
   // ------------------------------------
 }
 
-init()
+function loadModel() {
+  const choice = this.options[this.selectedIndex].innerText
+  console.log(`Restarting with model: ${choice}`)
+  init(choice)
+}
+
+init('dcgan128')

@@ -4,7 +4,6 @@ import { LayerInfo, ModelInfo } from './types'
 import QuadFactory from './QuadFactory'
 import type Generator from './Generator'
 import { getLayerDims } from './utils'
-
 export default class ModelVis {
   private _tfLayers: tf.layers.Layer[]
   private layerOutputs: { [key: string]: tf.Tensor }
@@ -13,12 +12,10 @@ export default class ModelVis {
   private numTensors = 0
   private model: Generator
 
-  constructor(model: Generator) {
-    this.model = model
-    this.init(model)
-  }
+  constructor() {}
 
   public init(model: Generator) {
+    this.model = model
     const z = tf.randomNormal([1, model.info.latent_dim])
     this._tfLayers = model.getLayers()
     this.layerOutputs = model.getLayerOutputs(this._tfLayers, z)

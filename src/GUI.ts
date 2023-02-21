@@ -1,4 +1,4 @@
-import { Accordion, Button, Checkbox, DropdownOpts, Slider } from './types'
+import { Accordion, Button, Checkbox, Dropdown, Slider } from './types'
 
 export default class GUI {
   private container: HTMLElement
@@ -58,18 +58,24 @@ export default class GUI {
     })
   }
 
-  public initDropdown(dropdownOpts: DropdownOpts[]) {
-    dropdownOpts.forEach(({ name: n, callback }) => {
-      const dropdown = document.getElementById(n)
+  public initDropdown(dropdownOpts: Dropdown[]) {
+    dropdownOpts.forEach(({ selector, callback }) => {
+      const dropdown = document.getElementById(selector)
       dropdown.onchange = callback
     })
   }
 
-  public populateDropdown(id: string, things: string[]) {
+  public populateDropdown(
+    id: string,
+    things: string[],
+    defaultSelection: string,
+  ) {
     const dropdown = document.getElementById(id)
+    dropdown.innerHTML = ''
     things.forEach((t) => {
       const option = document.createElement('option')
       option.innerText = t
+      option.selected = t === defaultSelection ? true : false
       dropdown.appendChild(option)
     })
   }
