@@ -19,6 +19,7 @@ export default class QuadFactory {
     data: Float32Array,
     quadIdx: number,
     layerIdx: number,
+    nLayers: number,
     offset: number,
   ) {
     const mesh = new GLQuad(this.G.gl)
@@ -33,12 +34,12 @@ export default class QuadFactory {
     })
 
     const initialTranslation: [number, number, number] = [
-      layerIdx * 3 - 25,
+      layerIdx * 3 - 35,
       0,
       5 - quadIdx / 2,
     ]
     const popUp: [number, number, number] = [
-      layerIdx * 3 - 25,
+      layerIdx * 3 - 35,
       0.8,
       5 - quadIdx / 2,
     ]

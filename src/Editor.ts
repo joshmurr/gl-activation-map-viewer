@@ -1,5 +1,11 @@
 import * as tf from '@tensorflow/tfjs'
-import { ActivationSelection, FillFn, LayerInfo, RectCoords } from './types'
+import {
+  ActivationSelection,
+  FillFn,
+  LayerInfo,
+  ModelInfo,
+  RectCoords,
+} from './types'
 
 import { fill, rect, rotate, scale } from './transformations'
 import { act2ImageData } from './conversions'
@@ -214,11 +220,13 @@ export default class Editor {
     this.hideDisplay()
   }
 
-  public show(currentAct: ActivationSelection) {
+  public show(currentAct: ActivationSelection, { data_format }: ModelInfo) {
     this.rotationCounter = 1
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
-    const [w, h] = getLayerDims(layer.shape)
+    const [w, h] = getLayerDims(layer.shape, data_format)
+
+    console.log(layer.shape)
 
     this.enableTools()
 
@@ -466,9 +474,9 @@ export default class Editor {
     }
   }
 
-  public remakeActivation(layer: LayerInfo) {
+  public remakeActivation(layer: LayerInfo, { data_format }: ModelInfo) {
     const { activations } = layer
-    const [w, h] = getLayerDims(layer.shape)
+    const [w, h] = getLayerDims(layer.shape, data_format)
     const layerTensors = activations.map((quad) => {
       return tf.tensor(quad.data).reshape([w, h, 1, 1]).squeeze()
     })

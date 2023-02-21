@@ -57,28 +57,36 @@ const currentActSelection: ActivationSelection = {
   layer: null,
 }
 
-const modelUrl =
-  process.env.NODE_ENV === 'development'
-    ? './model/model.json'
-    : 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json'
-
 async function init() {
   // MODEL ------------------------------
   const modelInfo: { [key: string]: ModelInfo } = {
     dcgan64: {
       description: 'DCGAN, 64x64 (16 MB)',
-      url: modelUrl,
+      url:
+        process.env.NODE_ENV === 'development'
+          ? './model/dcgan_64/model.json'
+          : 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json',
       size: 64,
       latent_dim: 128,
       draw_multiplier: 4,
-      animate_frame: 200,
+      data_format: 'channels_first',
+    },
+    dcgan128: {
+      description: 'DCGAN, 128x128 (16 MB)',
+      url: './model/dcgan_128/model.json',
+      size: 128,
+      latent_dim: 100,
+      draw_multiplier: 2,
+      data_format: 'channels_last',
     },
   }
 
   const loadingParent = document.querySelector('.loading__text')
   const loadingText = loadingParent.firstElementChild as HTMLElement
 
-  const gen = new Generator(modelInfo.dcgan64)
+  const MODEL_INFO = modelInfo.dcgan128
+
+  const gen = new Generator(MODEL_INFO)
   await gen.load({
     onProgress: (pct: number) => {
       const rounded = Math.round(pct * 100)
@@ -92,7 +100,7 @@ async function init() {
   })
 
   const vis = new ModelVis(gen)
-  let layers = vis.getActivations(G, program)
+  let layers = vis.getActivations(G, program, MODEL_INFO)
 
   /* GUI */
   const gui = new GUI(document.querySelector('.sidebar'))
@@ -102,15 +110,24 @@ async function init() {
   let initialAct: Tensor | null = null
 
   const handleInitialOutputClick = () => {
-    const [w, h] = getLayerDims(layers[layers.length - 1].shape)
+    const [w, h] = getLayerDims(
+      layers[layers.length - 1].shape,
+      MODEL_INFO.data_format,
+    )
     editor.showOutput(w, h)
     gen.displayOut(initialAct, editor.displayCanvas)
   }
 
   const handleOutputClick = () => {
-    const [w, h] = getLayerDims(layers[layers.length - 1].shape)
+    const [w, h] = getLayerDims(
+      layers[layers.length - 1].shape,
+      MODEL_INFO.data_format,
+    )
     editor.showOutput(w, h)
-    const { act } = editor.remakeActivation(layers[layers.length - 1])
+    const { act } = editor.remakeActivation(
+      layers[layers.length - 1],
+      MODEL_INFO,
+    )
     gen.displayOut(act, editor.displayCanvas)
   }
 
@@ -127,13 +144,10 @@ async function init() {
        * so that we can render it in the gui callbacks above using
        * `initialAct`.
        */
-      const currentZ = tf.randomNormal([
-        1,
-        modelInfo.dcgan64.latent_dim,
-      ]) as Tensor2D
+      const currentZ = tf.randomNormal([1, MODEL_INFO.latent_dim]) as Tensor2D
       const logits = gen.run(currentZ) as tf.Tensor
       vis.update(currentZ)
-      layers = vis.getActivations(G, program)
+      layers = vis.getActivations(G, program, MODEL_INFO)
       initialAct = logits
       gen.displayOut(logits, gui.output.base)
       randBtn.innerText = 'Random'
@@ -158,7 +172,7 @@ async function init() {
         const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
         const sliced = tfLayers.slice(idx)
 
-        const { act } = editor.remakeActivation(layer)
+        const { act } = editor.remakeActivation(layer, MODEL_INFO)
 
         const activations = gen.runLayersGen(sliced, act, idx)
         let logits = null
@@ -255,7 +269,8 @@ async function init() {
         }
       })
 
-      offset += shape[1]
+      offset +=
+        MODEL_INFO.data_format === 'channels_first' ? shape[1] : shape[3]
     })
     gl.useProgram(program)
     gl.clearColor(0.95, 0.96, 0.98, 1)
@@ -312,7 +327,7 @@ async function init() {
 
   canvas.addEventListener('mouseup', function () {
     if (!mouseOnSlice) return false
-    editor.show(currentActSelection)
+    editor.show(currentActSelection, MODEL_INFO)
   })
 
   document.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -320,8 +335,9 @@ async function init() {
     if (key === 'Escape') editor.hideDisplay()
   })
 
-  const { act } = editor.remakeActivation(layers[layers.length - 1])
+  const { act } = editor.remakeActivation(layers[layers.length - 1], MODEL_INFO)
   initialAct = act
+  console.log(initialAct)
   gen.displayOut(act, gui.output.base)
 
   requestAnimationFrame(draw)

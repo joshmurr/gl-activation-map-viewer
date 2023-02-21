@@ -6,7 +6,7 @@ export interface ModelInfo {
   size: number
   latent_dim: number
   draw_multiplier: number
-  animate_frame: number
+  data_format: string
 }
 
 export interface Button {
