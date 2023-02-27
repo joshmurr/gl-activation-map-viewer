@@ -13,6 +13,7 @@ export default class Model {
   }
 
   public async load(opts: { [key: string]: unknown }) {
+    console.log(`Loading model from URL: ${this.info.url}`)
     this.model = await tf.loadLayersModel(this.info.url, opts)
     this._loaded = true
   }

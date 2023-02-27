@@ -1,12 +1,6 @@
 import * as tf from '@tensorflow/tfjs'
 import { GL_Handler, Camera, Types as T } from 'gl-handler'
-import {
-  Accordion,
-  ActivationSelection,
-  Button,
-  Dropdown,
-  ModelInfo,
-} from './types'
+import { Accordion, ActivationSelection, Button, Dropdown } from './types'
 import { vec3, mat4 } from 'gl-matrix'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
@@ -16,6 +10,7 @@ import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import { findLayer, getLayerDims, swapClasses, waitForRepaint } from './utils'
 import './styles/main.scss'
+import { modelInfo } from './modelInfo'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
@@ -59,28 +54,6 @@ let oldPickNdx = -1
 
 let gen: Generator
 
-const modelInfo: { [key: string]: ModelInfo } = {
-  dcgan64: {
-    description: 'DCGAN, 64x64 (16 MB)',
-    url:
-      process.env.NODE_ENV === 'development'
-        ? './model/dcgan_64/model.json'
-        : 'https://storage.googleapis.com/store.alantian.net/tfjs_gan/chainer-dcgan-celebahq-64/tfjs_SmoothedGenerator_50000/model.json',
-    size: 64,
-    latent_dim: 128,
-    draw_multiplier: 4,
-    data_format: 'channels_first',
-  },
-  dcgan128: {
-    description: 'DCGAN, 128x128',
-    url: './model/dcgan_128/model.json',
-    size: 128,
-    latent_dim: 100,
-    draw_multiplier: 4,
-    data_format: 'channels_last',
-  },
-}
-
 const gui = new GUI(document.querySelector('.sidebar'))
 const base = document.getElementById('model-base-output') as HTMLCanvasElement
 const output = document.getElementById('model-output') as HTMLCanvasElement
@@ -91,13 +64,13 @@ const vis = new ModelVis()
 
 let initialAct: Tensor | null = null
 
-async function init(chosenModel: keyof ModelInfo) {
-const currentActSelection: ActivationSelection = {
-  id: -1,
-  relativeId: -1,
-  layerName: 'none',
-  layer: null,
-}
+async function init(chosenModel: string) {
+  const currentActSelection: ActivationSelection = {
+    id: -1,
+    relativeId: -1,
+    layerName: 'none',
+    layer: null,
+  }
 
   // MODEL ------------------------------
 
@@ -144,7 +117,9 @@ const currentActSelection: ActivationSelection = {
       layers[layers.length - 1],
       MODEL_INFO,
     )
-    gen.displayOut(act, editor.displayCanvas)
+    if (MODEL_INFO.data_format === 'channels_first')
+      gen.displayOutTranspose(act, editor.displayCanvas)
+    else gen.displayOut(act, editor.displayCanvas)
   }
 
   gui.initImageOutput('base', base, handleInitialOutputClick)
