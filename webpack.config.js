@@ -53,14 +53,19 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: 'src/model',
-          to: 'model',
-        },
-        {
           from: 'src/assets',
           to: 'assets',
         },
-      ],
+      ].concat(
+        devMode
+          ? [
+              {
+                from: 'src/model',
+                to: 'model',
+              },
+            ]
+          : [],
+      ),
     }),
   ].concat(
     devMode

@@ -6,12 +6,17 @@ export interface ModelInfo {
   size: number
   latent_dim: number
   draw_multiplier: number
-  animate_frame: number
+  data_format: string
 }
 
 export interface Button {
   selector: string
   eventListener: string
+  callback: () => void
+}
+
+export interface Dropdown {
+  selector: string
   callback: () => void
 }
 
