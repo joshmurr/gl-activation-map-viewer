@@ -6,7 +6,7 @@ export const modelInfo: { [key: string]: ModelInfo } = {
     url:
       process.env.NODE_ENV === 'development'
         ? './model/dcgan_64/model.json'
-        : 'https://storage.cloud.google.com/gl-activation-map-viewer/dcgan_64/model.json?authuser=1',
+        : 'https://storage.cloud.google.com/gl-activation-map-viewer/dcgan_64/model.json',
     size: 64,
     latent_dim: 128,
     draw_multiplier: 4,
@@ -17,7 +17,7 @@ export const modelInfo: { [key: string]: ModelInfo } = {
     url:
       process.env.NODE_ENV === 'development'
         ? './model/dcgan_128/model.json'
-        : 'https://storage.cloud.google.com/gl-activation-map-viewer/dcgan_128/model.json?authuser=1',
+        : 'https://storage.cloud.google.com/gl-activation-map-viewer/dcgan_128/model.json',
     size: 128,
     latent_dim: 128,
     draw_multiplier: 4,
