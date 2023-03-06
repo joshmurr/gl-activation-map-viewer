@@ -171,8 +171,6 @@ async function init(chosenModel: string) {
 
         const { act } = editor.remakeActivation(layer, MODEL_INFO)
 
-        console.log(act)
-
         const activations = gen.runLayersGen(sliced, act, idx)
         let logits = null
         let layerIdx = idx

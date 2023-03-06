@@ -222,7 +222,6 @@ export default class Editor {
 
   public show(currentAct: ActivationSelection, { data_format }: ModelInfo) {
     this.rotationCounter = 1
-    console.log(currentAct)
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = getLayerDims(layer.shape, data_format)
