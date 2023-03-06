@@ -1,24 +1,27 @@
 import { EaseFn, default as easing } from './easingFuncs'
+import { Tuple } from './types'
 
-type anim = {
+/* FIXME: The mad typing going on in here */
+
+export interface IAnim {
   name: string
   counter: number
-  frames: any[]
-  step: () => void
-  reverse: () => void
+  frames: Array<Tuple>
+  step: () => Tuple
+  reverse: () => Tuple
 }
 
 export default class Animator {
-  _animations: anim[] = []
+  _animations: IAnim[] = []
 
   animation(
     name: string,
     from: any,
     to: any,
     frameCount: number,
-    ease: EaseFn
+    ease: EaseFn,
   ) {
-    let frames: any = []
+    let frames = [] as Tuple[]
 
     if (Array.isArray(from)) {
       frames = this.arrayLerp(from, to, frameCount, ease)
@@ -29,7 +32,7 @@ export default class Animator {
     }
 
     let counter = 0
-    const anim: anim = {
+    const anim: IAnim = {
       name,
       counter,
       frames,
@@ -54,19 +57,19 @@ export default class Animator {
     from: number[],
     to: number[],
     frameCount: number,
-    ease: EaseFn
+    ease: EaseFn,
   ): Array<number[]> {
     if (from.length !== to.length) return
 
-    const frames: Array<number[]> = []
+    const frames: Array<Tuple> = []
 
     for (let i = 0; i < frameCount; i++) {
-      const frame: number[] = []
+      const frame = []
       for (let j = 0; j < from.length; j++) {
         const val = this.interpolator(from[j], to[j], i / frameCount, ease)
         frame.push(val)
       }
-      frames.push(frame)
+      frames.push(frame as Tuple)
     }
 
     return frames

@@ -50,11 +50,11 @@ in vec2 v_TexCoord;
 uniform sampler2D u_texture;
 uniform vec3 u_colour;
 uniform vec3 u_colourMult;
+uniform vec2 u_resolution;
 
 out vec4 OUTCOLOUR;
 
 void main(){
   vec4 data = vec4(texture(u_texture, v_TexCoord).rrr, 1.0);
   OUTCOLOUR = data * vec4(u_colourMult, 1.0);
-  //OUTCOLOUR = vec4(u_colour, 1.0) * vec4(u_colourMult, 1.0);
 }`

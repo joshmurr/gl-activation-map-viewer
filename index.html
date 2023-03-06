@@ -30,18 +30,15 @@
           <p><a href="#section-2">See below for more information.</a></p>
         </div>
       </header>
+
       <section class="model-vis full-bleed">
         <div id="model-vis-container"></div>
+
         <div class="sidebar">
           <div class="sidebar__item">
             <p class="sidebar__text">Model Output:</p>
             <canvas id="model-base-output"></canvas>
           </div>
-
-          <!-- <div class="sidebar__item"> -->
-          <!--   <p class="sidebar__text">Selected:</p> -->
-          <!--   <canvas id="selected-output"></canvas> -->
-          <!-- </div> -->
 
           <div class="sidebar__item">
             <p class="sidebar__text">Edited Output:</p>
@@ -51,10 +48,16 @@
             <button class="rand-btn">Random</button>
             <button class="predict-btn">Predict</button>
           </div>
+
+          <div class="sidebar__debug">
+            <p>Slice ID: <span id="sidebar__debug__id"></span></p>
+            <p>Layer Name: <span id="sidebar__debug__layername"></span></p>
+          </div>
           <label for="model-selection">Choose a model:</label>
           <select id="model-selection" name="model-selection"></select>
         </div>
       </section>
+
       <section class="full-bleed container">
         <button id="section-2" class="accordion">
           What is this?<span class="accordion__more">+</span>

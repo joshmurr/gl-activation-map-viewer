@@ -14,7 +14,7 @@ import { modelInfo } from './modelInfo'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
-const { width } = screen
+const { width, height } = screen
 const canvas = G.canvas(width, Math.floor(width * 0.5), {}, containerEl)
 const gl = G.gl
 const program = G.shaderProgram(renderVert, renderFrag)
@@ -73,9 +73,12 @@ async function init(chosenModel: string) {
   }
 
   // MODEL ------------------------------
-
+  document.body.classList.add('hideOverflow')
   const loadingParent = document.querySelector('.loading__text')
+  swapClasses(loadingParent.parentElement, 'hide', 'show')
   const loadingText = loadingParent.firstElementChild as HTMLElement
+  const pctEl = loadingText.firstElementChild as HTMLElement
+  pctEl.innerText = '0%'
 
   const MODEL_INFO = modelInfo[chosenModel]
 
@@ -84,11 +87,12 @@ async function init(chosenModel: string) {
   await gen.load({
     onProgress: (pct: number) => {
       const rounded = Math.round(pct * 100)
-      const pctEl = loadingText.firstElementChild as HTMLElement
       pctEl.innerText = `${rounded}%`
       if (rounded === 100) {
-        swapClasses(loadingParent.parentElement, 'show', 'hide')
-        document.body.classList.remove('hideOverflow')
+        waitForRepaint(() => {
+          swapClasses(loadingParent.parentElement, 'show', 'hide')
+          document.body.classList.remove('hideOverflow')
+        })
       }
     },
   })
@@ -176,9 +180,11 @@ async function init(chosenModel: string) {
           vis.putActivations(layer, logits, MODEL_INFO)
         }
 
-        if (MODEL_INFO.data_format === 'channels_first')
+        if (MODEL_INFO.data_format === 'channels_first') {
           gen.displayOutTranspose(logits, gui.output.output)
-        else gen.displayOut(logits, gui.output.output)
+        } else {
+          gen.displayOut(logits, gui.output.output)
+        }
         predictBtn.innerText = 'Predict'
       })
     })
@@ -290,6 +296,7 @@ async function init(chosenModel: string) {
           ...baseUniforms,
           u_ModelMatrix: mesh.updateModelMatrix(time),
           u_ViewMatrix: C.viewMat,
+          u_resolution: [width, height],
           ...uniforms,
         })
         gl.drawElements(gl.TRIANGLES, mesh.numIndices, gl.UNSIGNED_SHORT, 0)
@@ -305,13 +312,11 @@ async function init(chosenModel: string) {
     requestAnimationFrame(draw)
   }
 
-  canvas.addEventListener('mousemove', function (e) {
+  function handleMouseMove(e: MouseEvent) {
     const rect = this.getBoundingClientRect()
     mouseX = e.clientX - rect.left
     mouseY = e.clientY - rect.top
-  })
 
-  canvas.addEventListener('mousedown', function () {
     if (oldPickNdx > -1) {
       const [layerIdx, relativeId] = findLayer(oldPickNdx, layers)
       const layer = layers[layerIdx]
@@ -325,17 +330,35 @@ async function init(chosenModel: string) {
       }
       Object.assign(currentActSelection, selection)
     }
-  })
+    if (mouseOnSlice) {
+      const idEl = document.querySelector('#sidebar__debug__id') as HTMLElement
+      const layerNameEl = document.querySelector(
+        '#sidebar__debug__layername',
+      ) as HTMLElement
+      idEl.innerText = currentActSelection.id.toString()
+      layerNameEl.innerText = currentActSelection.layerName
+    }
+  }
 
-  canvas.addEventListener('mouseup', function () {
+  function handleMouseDown() {
     if (!mouseOnSlice) return false
     editor.show(currentActSelection, MODEL_INFO)
-  })
+  }
 
-  document.addEventListener('keydown', (e: KeyboardEvent) => {
+  function handleMouseUp() {
+    if (!mouseOnSlice) return false
+    editor.show(currentActSelection, MODEL_INFO)
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
     const { key } = e
     if (key === 'Escape') editor.hideDisplay()
-  })
+  }
+
+  canvas.addEventListener('mousemove', handleMouseMove)
+  canvas.addEventListener('mousedown', handleMouseDown)
+  canvas.addEventListener('mouseup', handleMouseUp)
+  document.addEventListener('keydown', handleKeyDown)
 
   const { act } = editor.remakeActivation(layers[layers.length - 1], MODEL_INFO)
   initialAct = act
@@ -344,14 +367,18 @@ async function init(chosenModel: string) {
     gen.displayOutTranspose(act, gui.output.base)
   else gen.displayOut(act, gui.output.base)
 
+  function loadModel() {
+    canvas.removeEventListener('mousemove', handleMouseMove)
+    canvas.removeEventListener('mousedown', handleMouseDown)
+    canvas.removeEventListener('mouseup', handleMouseUp)
+    document.removeEventListener('keydown', handleKeyDown)
+    const choice = this.options[this.selectedIndex].innerText
+    console.log(`Restarting with model: ${choice}`)
+    init(choice)
+  }
+
   requestAnimationFrame(draw)
   // ------------------------------------
-}
-
-function loadModel() {
-  const choice = this.options[this.selectedIndex].innerText
-  console.log(`Restarting with model: ${choice}`)
-  init(choice)
 }
 
 init('dcgan64')

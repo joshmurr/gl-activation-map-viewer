@@ -1,12 +1,13 @@
-import { Quad as GLQuad } from 'gl_handler'
+import { Quad as GLQuad } from 'gl-handler'
+import { IAnim } from './Animator'
 
 export default class Quad {
   private _data: Float32Array
   private _mesh: GLQuad
-  private _uniforms: { [key: string]: any }
-  private _animations: { [key: string]: any }
+  private _uniforms: { [key: string]: unknown }
+  private _animations: { [key: string]: IAnim }
   private _uid: number[]
-  private _updateSelf: (a: unknown, b: unknown) => any
+  private _updateSelf: (a: unknown, b: unknown) => void
   private _needsUpdate = false
   private _shape: [number, number]
 
@@ -16,7 +17,7 @@ export default class Quad {
     shape: [number, number],
     uid: number[],
     texture: WebGLTexture,
-    animations: { [key: string]: any },
+    animations: { [key: string]: IAnim },
   ) {
     this._mesh = mesh
     this._data = data
@@ -67,7 +68,7 @@ export default class Quad {
     this.uniforms.u_texture = _tex
   }
 
-  public set updateFunc(func: (...args: any[]) => void) {
+  public set updateFunc(func: (...args: unknown[]) => void) {
     /* Takes a decorated function to handle the visual update.
      * Nameley updating the texture..
      */

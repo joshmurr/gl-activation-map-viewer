@@ -42,6 +42,8 @@ export default class Editor {
   private rotationCounter = 1
   private _buttons: HTMLButtonElement[] = []
   private _sliders: HTMLInputElement[] = []
+  private _nFillColors = 10
+  private _fillColor = 'rgb(0, 0, 0)'
 
   constructor() {
     this.buildContainer()
@@ -59,6 +61,12 @@ export default class Editor {
     this.tools = document.createElement('div')
     this.tools.id = 'tools'
 
+    const topRow = document.createElement('div')
+    const bottomRow = document.createElement('div')
+
+    topRow.classList.add('row')
+    bottomRow.classList.add('row')
+
     const buttons = [
       {
         text: '&check;',
@@ -67,44 +75,32 @@ export default class Editor {
         callbacks: [['click', () => this.hideDisplay()]],
       },
       {
-        text: 'Black',
-        parent: this.tools,
+        text: 'Fill',
+        parent: topRow,
         id: null,
-        callbacks: [['click', () => this.fill('black')]],
-      },
-      {
-        text: 'White',
-        parent: this.tools,
-        id: null,
-        callbacks: [['click', () => this.fill('white')]],
-      },
-      {
-        text: 'Grey',
-        parent: this.tools,
-        id: null,
-        callbacks: [['click', () => this.fill('grey')]],
+        callbacks: [['click', () => this.fill(this._fillColor)]],
       },
       {
         text: 'Rect',
-        parent: this.tools,
+        parent: topRow,
         id: null,
-        callbacks: [['click', () => this.autoFillRect('grey')]],
+        callbacks: [['click', () => this.autoFillRect(this._fillColor)]],
       },
       {
         text: 'Rotate',
-        parent: this.tools,
+        parent: topRow,
         id: null,
         callbacks: [['click', () => this.rotate()]],
       },
       {
         text: 'Scale',
-        parent: this.tools,
+        parent: topRow,
         id: null,
         callbacks: [['click', () => this.scale()]],
       },
       {
         text: 'Apply to Stack',
-        parent: this.tools,
+        parent: topRow,
         id: 'all',
         callbacks: [
           ['click', () => this.toggleApplyToAll()],
@@ -125,6 +121,9 @@ export default class Editor {
       this.addButton(text, parent, callbacks, id),
     )
 
+    const colorPicker = this.makeColorPicker()
+    bottomRow.appendChild(colorPicker)
+
     const sliders = [
       {
         name: 'brush',
@@ -143,7 +142,7 @@ export default class Editor {
           this.brushSize = Number(val)
           document.getElementById('brush-size').innerText = val
         },
-        parent: this.tools,
+        parent: bottomRow,
       },
       {
         name: 'scale',
@@ -162,7 +161,7 @@ export default class Editor {
           this._scaleFactor = 1 / Number(val)
           document.getElementById('scale-factor').innerText = val
         },
-        parent: this.tools,
+        parent: bottomRow,
       },
     ]
 
@@ -210,6 +209,8 @@ export default class Editor {
     canvasCont.appendChild(this.overlayCanvas)
 
     editorWrapper.appendChild(canvasCont)
+    this.tools.appendChild(topRow)
+    this.tools.appendChild(bottomRow)
     editorWrapper.appendChild(this.tools)
 
     this.editor.appendChild(editorWrapper)
@@ -225,8 +226,6 @@ export default class Editor {
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = getLayerDims(layer.shape, data_format)
-
-    console.log(layer.shape)
 
     this.enableTools()
 
@@ -317,7 +316,7 @@ export default class Editor {
     outputId: string,
   ) {
     const container = document.createElement('div')
-    container.classList.add('slider-container')
+    container.classList.add('vertical-container')
 
     const sliderEl = document.createElement('input') as HTMLInputElement
     sliderEl.type = 'range'
@@ -348,6 +347,63 @@ export default class Editor {
     parent.appendChild(container)
 
     this._sliders.push(sliderEl)
+  }
+
+  private makeColorPicker() {
+    function handleMouseOver() {
+      this.classList.add('highlight')
+    }
+    function handleMouseOut() {
+      this.classList.remove('highlight')
+    }
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      this._fillColor = target.style.backgroundColor
+      this.emptySiblings(target)
+      target.classList.add('chosen')
+    }
+
+    const container = document.createElement('div')
+    container.classList.add('vertical-container')
+
+    const swatches = document.createElement('div')
+    swatches.classList.add('color-picker')
+    const colors = [...new Array(this._nFillColors - 1)].map((_, i) =>
+      Math.floor(255 * (i / (this._nFillColors - 1))),
+    )
+    colors.push(255)
+    colors.forEach((color) => {
+      const swatch = document.createElement('span')
+      swatch.classList.add('swatch')
+      swatch.style.backgroundColor = `rgb(${color}, ${color}, ${color})`
+
+      swatch.addEventListener('mouseover', handleMouseOver)
+      swatch.addEventListener('mouseout', handleMouseOut)
+      swatch.addEventListener('click', handleClick)
+
+      swatches.appendChild(swatch)
+    })
+
+    container.appendChild(swatches)
+
+    const text = document.createElement('p')
+    text.innerText = 'Fill colour'
+    text.classList.add('text-container', 'reset')
+
+    container.appendChild(text)
+
+    return container
+  }
+
+  private emptySiblings(el: HTMLElement) {
+    const emptySibling = (sibling: ChildNode) => {
+      if (!sibling) return
+      sibling.classList.remove('chosen')
+      emptySibling(sibling.nextSibling)
+    }
+
+    const firstSibling = el.parentNode.firstChild
+    emptySibling(firstSibling)
   }
 
   private handleKeyDown(e: KeyboardEvent) {
@@ -402,6 +458,13 @@ export default class Editor {
 
   private text2FloatColour(colour: string) {
     return this.text2Colour(colour) / 255
+  }
+
+  private rgbStringToFloatColours(rgbString: string) {
+    const start = rgbString.indexOf('(') + 1
+    const stop = rgbString.indexOf(',')
+    const greyscaleVal = Number(rgbString.slice(start, stop))
+    return greyscaleVal / 255
   }
 
   private draw(event: MouseEvent) {
@@ -498,8 +561,8 @@ export default class Editor {
 
     const coords: RectCoords = [x1, y1, x2, y2]
 
-    const fillColour = this.text2FloatColour(colour)
-    const fillFn = (_: number) => fillColour
+    const colourValue = this.rgbStringToFloatColours(colour)
+    const fillFn = (_: number) => colourValue
     this.applyRect(coords, fillFn)
   }
 
@@ -527,7 +590,7 @@ export default class Editor {
   }
 
   private fill(colour: string) {
-    const colourValue = this.text2FloatColour(colour)
+    const colourValue = this.rgbStringToFloatColours(colour)
     this.genericTransformation(fill, colourValue)
   }
 
@@ -549,7 +612,6 @@ export default class Editor {
 
   private toggleApplyToAll(force?: boolean) {
     this._applyToAll = typeof force === 'boolean' ? force : !this._applyToAll
-    console.log(`applyToAll: ${this._applyToAll}`)
     document.getElementById('all').classList.toggle('active', this._applyToAll)
   }
 

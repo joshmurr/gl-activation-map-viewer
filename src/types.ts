@@ -66,3 +66,5 @@ export interface ActivationSelection {
 export type RectCoords = [number, number, number, number]
 
 export type FillFn = (c: number, i?: number) => number
+
+export type Tuple = [number, number, number]
