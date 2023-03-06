@@ -369,9 +369,9 @@ export default class Editor {
     const swatches = document.createElement('div')
     swatches.classList.add('color-picker')
     const colors = [...new Array(this._nFillColors - 1)].map((_, i) =>
-      Math.floor(255 / (i + 1)),
+      Math.floor(255 * (i / (this._nFillColors - 1))),
     )
-    colors.push(0)
+    colors.push(255)
     colors.forEach((color) => {
       const swatch = document.createElement('span')
       swatch.classList.add('swatch')
