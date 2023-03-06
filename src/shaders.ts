@@ -50,6 +50,7 @@ in vec2 v_TexCoord;
 uniform sampler2D u_texture;
 uniform vec3 u_colour;
 uniform vec3 u_colourMult;
+uniform vec2 u_resolution;
 
 out vec4 OUTCOLOUR;
 

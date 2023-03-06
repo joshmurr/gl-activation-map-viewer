@@ -14,7 +14,7 @@ import { modelInfo } from './modelInfo'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
-const { width } = screen
+const { width, height } = screen
 const canvas = G.canvas(width, Math.floor(width * 0.5), {}, containerEl)
 const gl = G.gl
 const program = G.shaderProgram(renderVert, renderFrag)
@@ -182,7 +182,9 @@ async function init(chosenModel: string) {
 
         if (MODEL_INFO.data_format === 'channels_first') {
           gen.displayOutTranspose(logits, gui.output.output)
-        } else gen.displayOut(logits, gui.output.output)
+        } else {
+          gen.displayOut(logits, gui.output.output)
+        }
         predictBtn.innerText = 'Predict'
       })
     })
@@ -294,6 +296,7 @@ async function init(chosenModel: string) {
           ...baseUniforms,
           u_ModelMatrix: mesh.updateModelMatrix(time),
           u_ViewMatrix: C.viewMat,
+          u_resolution: [width, height],
           ...uniforms,
         })
         gl.drawElements(gl.TRIANGLES, mesh.numIndices, gl.UNSIGNED_SHORT, 0)
