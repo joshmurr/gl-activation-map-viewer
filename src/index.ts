@@ -313,9 +313,7 @@ async function init(chosenModel: string) {
     const rect = this.getBoundingClientRect()
     mouseX = e.clientX - rect.left
     mouseY = e.clientY - rect.top
-  }
 
-  function handleMouseDown() {
     if (oldPickNdx > -1) {
       const [layerIdx, relativeId] = findLayer(oldPickNdx, layers)
       const layer = layers[layerIdx]
@@ -329,6 +327,19 @@ async function init(chosenModel: string) {
       }
       Object.assign(currentActSelection, selection)
     }
+    if (mouseOnSlice) {
+      const idEl = document.querySelector('#sidebar__debug__id') as HTMLElement
+      const layerNameEl = document.querySelector(
+        '#sidebar__debug__layername',
+      ) as HTMLElement
+      idEl.innerText = currentActSelection.id.toString()
+      layerNameEl.innerText = currentActSelection.layerName
+    }
+  }
+
+  function handleMouseDown() {
+    if (!mouseOnSlice) return false
+    editor.show(currentActSelection, MODEL_INFO)
   }
 
   function handleMouseUp() {
