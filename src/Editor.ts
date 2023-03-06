@@ -222,11 +222,10 @@ export default class Editor {
 
   public show(currentAct: ActivationSelection, { data_format }: ModelInfo) {
     this.rotationCounter = 1
+    console.log(currentAct)
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = getLayerDims(layer.shape, data_format)
-
-    console.log(layer.shape)
 
     this.enableTools()
 
@@ -549,7 +548,6 @@ export default class Editor {
 
   private toggleApplyToAll(force?: boolean) {
     this._applyToAll = typeof force === 'boolean' ? force : !this._applyToAll
-    console.log(`applyToAll: ${this._applyToAll}`)
     document.getElementById('all').classList.toggle('active', this._applyToAll)
   }
 

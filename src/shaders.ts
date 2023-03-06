@@ -56,5 +56,4 @@ out vec4 OUTCOLOUR;
 void main(){
   vec4 data = vec4(texture(u_texture, v_TexCoord).rrr, 1.0);
   OUTCOLOUR = data * vec4(u_colourMult, 1.0);
-  //OUTCOLOUR = vec4(u_colour, 1.0) * vec4(u_colourMult, 1.0);
 }`

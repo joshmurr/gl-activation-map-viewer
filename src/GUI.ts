@@ -30,7 +30,9 @@ export default class GUI {
 
   public initButtons(buttons: Button[]) {
     buttons.forEach(({ selector, eventListener, callback }) => {
-      const buttonEl = document.querySelector(selector)
+      const buttonEl = this.clearEventListeners(
+        document.querySelector(selector),
+      )
       buttonEl.addEventListener(eventListener, callback)
     })
   }
@@ -44,7 +46,9 @@ export default class GUI {
 
   public initSliders(sliders: Slider[]) {
     sliders.forEach(({ name, eventListener, callback }) => {
-      const sliderEl = document.querySelector(`input[name="${name}"]`)
+      const sliderEl = this.clearEventListeners(
+        document.querySelector(`input[name="${name}"]`),
+      )
       sliderEl.addEventListener(eventListener, callback)
       this._sliders[name] = sliderEl as HTMLInputElement
     })
@@ -52,7 +56,9 @@ export default class GUI {
 
   public initAccordions(accordions: Accordion[]) {
     accordions.forEach(({ selector, eventListener, callback }) => {
-      const accordionBtn = document.querySelector(selector)
+      const accordionBtn = this.clearEventListeners(
+        document.querySelector(selector),
+      )
       accordionBtn.addEventListener(eventListener, callback)
     })
   }
@@ -97,6 +103,12 @@ export default class GUI {
     if (callback) canvas.addEventListener('click', callback)
 
     this.outputSurfaces[ref] = canvas
+  }
+
+  public clearEventListeners(oldElement: Element) {
+    const newElement = oldElement.cloneNode(true)
+    oldElement.parentNode.replaceChild(newElement, oldElement)
+    return newElement
   }
 
   public get output() {
