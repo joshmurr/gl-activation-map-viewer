@@ -173,6 +173,10 @@ async function init(chosenModel: string) {
 
         const activations = gen.runLayersGen(sliced, act, idx)
         let logits = null
+
+        console.log('LOGITS: ', logits)
+        console.log('MODEL_INFO: ', MODEL_INFO)
+
         let layerIdx = idx
         const layerOffset = Math.abs(tfLayers.length - layers.length)
         for ({ logits, layerIdx } of activations) {
