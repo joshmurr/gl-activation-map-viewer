@@ -41,6 +41,7 @@ export default class Editor {
     transformationFn: TransformationFn
     applyToAll: boolean
   }[] = []
+  private _changesMade = false
 
   constructor() {
     this.buildContainer()
@@ -540,7 +541,7 @@ export default class Editor {
     this.overlayCtx.closePath()
   }
 
-  private updateActivation /* newData: Float32Array, */ /* transformation: (...args: unknown[]) => TypedArray, */() {
+  private updateActivation() {
     if (!this.currentActSelection) return
     const { width, height } = this.canvas
 
@@ -559,6 +560,7 @@ export default class Editor {
     })
 
     this._transformationCache = []
+    this._changesMade = true
   }
 
   public remakeActivation(layer: LayerInfo, { data_format }: ModelInfo) {
@@ -608,7 +610,7 @@ export default class Editor {
     deferredTransormation.displayName = transformationFn.displayName
 
     this._transformationCache.push({
-      name: transformationFn.name,
+      name: transformationFn.displayName,
       transformationFn: deferredTransormation,
       applyToAll: this._applyToAll,
     })
@@ -681,5 +683,12 @@ export default class Editor {
 
   public get displayCanvas() {
     return this.canvas
+  }
+
+  public get changesMade() {
+    return this._changesMade
+  }
+  public set changesMade(val: boolean) {
+    this._changesMade = val
   }
 }
