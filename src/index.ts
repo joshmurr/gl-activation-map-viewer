@@ -5,7 +5,7 @@ import { vec3, mat4 } from 'gl-matrix'
 import Generator from './Generator'
 import ModelVis from './ModelVis'
 import GUI from './GUI'
-import { Tensor, Tensor2D } from '@tensorflow/tfjs'
+import type { Tensor, Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import { findLayer, getLayerDims, swapClasses, waitForRepaint } from './utils'
@@ -59,12 +59,18 @@ const base = document.getElementById('model-base-output') as HTMLCanvasElement
 const output = document.getElementById('model-output') as HTMLCanvasElement
 
 const editor = new Editor()
-
 const vis = new ModelVis()
-
 let initialAct: Tensor | null = null
 
-async function init(chosenModel: string) {
+function getModelNameFromURL() {
+  const queryString = window.location.search
+  const urlParams = new URLSearchParams(queryString)
+  return urlParams.get('model')
+}
+
+async function init() {
+  const chosenModel = getModelNameFromURL() || 'dcgan64'
+
   const currentActSelection: ActivationSelection = {
     id: -1,
     relativeId: -1,
@@ -99,16 +105,17 @@ async function init(chosenModel: string) {
   vis.init(gen)
   let layers = vis.getActivations(G, program, MODEL_INFO)
 
-  /* GUI */
   const handleInitialOutputClick = () => {
     const [w, h] = getLayerDims(
       layers[layers.length - 1].shape,
       MODEL_INFO.data_format,
     )
     editor.showOutput(w, h)
-    if (MODEL_INFO.data_format === 'channels_first')
+    if (MODEL_INFO.data_format === 'channels_first') {
       gen.displayOutTranspose(initialAct, editor.displayCanvas)
-    else gen.displayOut(initialAct, editor.displayCanvas)
+    } else {
+      gen.displayOut(initialAct, editor.displayCanvas)
+    }
   }
 
   const handleOutputClick = () => {
@@ -129,11 +136,11 @@ async function init(chosenModel: string) {
   gui.initImageOutput('base', base, handleInitialOutputClick)
   gui.initImageOutput('output', output, handleOutputClick)
 
-  const random = () => {
+  const random = async () => {
     const randBtn = document.querySelector('.rand-btn') as HTMLButtonElement
     randBtn.innerText = 'Loading...'
 
-    waitForRepaint(() => {
+    waitForRepaint(async () => {
       /**
        * We're not tf.tidy-ing here so we don't dispose the tensor
        * so that we can render it in the gui callbacks above using
@@ -144,9 +151,17 @@ async function init(chosenModel: string) {
       vis.update(currentZ)
       layers = vis.getActivations(G, program, MODEL_INFO)
       initialAct = logits
-      if (MODEL_INFO.data_format === 'channels_first')
-        gen.displayOutTranspose(logits, gui.output.base)
-      else gen.displayOut(logits, gui.output.base)
+
+      if (MODEL_INFO.data_format === 'channels_first') {
+        await gen.displayOutTranspose(logits, gui.output.base)
+        currentZ.dispose()
+        logits.dispose()
+      } else {
+        await gen.displayOut(logits, gui.output.base)
+        currentZ.dispose()
+        logits.dispose()
+      }
+
       randBtn.innerText = 'Random'
     })
   }
@@ -163,7 +178,6 @@ async function init(chosenModel: string) {
         const layer = currentActSelection.layer
           ? currentActSelection.layer
           : layers[0]
-
         const { name } = layer
 
         const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
@@ -172,10 +186,8 @@ async function init(chosenModel: string) {
         const { act } = editor.remakeActivation(layer, MODEL_INFO)
 
         const activations = gen.runLayersGen(sliced, act, idx)
-        let logits = null
 
-        console.log('LOGITS: ', logits)
-        console.log('MODEL_INFO: ', MODEL_INFO)
+        let logits = null
 
         let layerIdx = idx
         const layerOffset = Math.abs(tfLayers.length - layers.length)
@@ -189,6 +201,7 @@ async function init(chosenModel: string) {
         } else {
           gen.displayOut(logits, gui.output.output)
         }
+
         predictBtn.innerText = 'Predict'
       })
     })
@@ -211,7 +224,8 @@ async function init(chosenModel: string) {
   const dropdowns: Dropdown[] = [
     {
       selector: 'model-selection',
-      callback: loadModel,
+      /* callback: loadModel, */
+      callback: loadModelWithPageLoad,
     },
   ]
   gui.initDropdown(dropdowns)
@@ -233,7 +247,6 @@ async function init(chosenModel: string) {
   }))
 
   gui.initAccordions(accordions)
-  /* GUI END */
 
   function draw(time: number) {
     // PICKING ----------------------
@@ -371,18 +384,32 @@ async function init(chosenModel: string) {
     gen.displayOutTranspose(act, gui.output.base)
   else gen.displayOut(act, gui.output.base)
 
-  function loadModel() {
+  /* function loadModel() {
+
+
+    // This unfortunately was just more hassle than it was worth.
+    // All the callbacks in the app mean was just too much of a pain to
+    // track down all the dangling refs to various arrays of arrays of objects.
+
     canvas.removeEventListener('mousemove', handleMouseMove)
     canvas.removeEventListener('mousedown', handleMouseDown)
     canvas.removeEventListener('mouseup', handleMouseUp)
     document.removeEventListener('keydown', handleKeyDown)
+
     const choice = this.options[this.selectedIndex].innerText
+    vis.destroy()
+    initialAct.dispose()
     console.log(`Restarting with model: ${choice}`)
-    init(choice)
+    init()
+  } */
+
+  function loadModelWithPageLoad() {
+    const choice = this.options[this.selectedIndex].innerText
+    window.location.assign(`${window.location.origin}/?model=${choice}`)
   }
 
   requestAnimationFrame(draw)
   // ------------------------------------
 }
 
-init('dcgan64')
+init()

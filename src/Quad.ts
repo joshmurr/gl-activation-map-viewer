@@ -39,6 +39,10 @@ export default class Quad {
     this._updateSelf(this._uniforms.u_texture, this._data)
   }
 
+  public destroy() {
+    this._mesh.destroy()
+  }
+
   public get uniforms() {
     return this._uniforms
   }

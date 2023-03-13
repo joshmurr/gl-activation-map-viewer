@@ -2,6 +2,7 @@ import { ModelInfo } from './types'
 
 export const modelInfo: { [key: string]: ModelInfo } = {
   dcgan64: {
+    name: 'dcgan64',
     description: 'DCGAN, 64x64 (16 MB)',
     url:
       process.env.NODE_ENV === 'development'
@@ -13,6 +14,7 @@ export const modelInfo: { [key: string]: ModelInfo } = {
     data_format: 'channels_first',
   },
   dcgan128: {
+    name: 'dcgan128',
     description: 'DCGAN, 128x128',
     url:
       process.env.NODE_ENV === 'development'

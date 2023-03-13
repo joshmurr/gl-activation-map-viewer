@@ -1,10 +1,10 @@
 import { GL_Handler, Quad as GLQuad } from 'gl-handler'
 import { HSVtoRGB } from './utils'
 import Animator from './Animator'
-import { Quad } from './types'
+import { QuadDesc } from './types'
 
 export default class Layer {
-  private _quads: Quad[]
+  private _quads: QuadDesc[]
   constructor(
     G: GL_Handler,
     program: WebGLProgram,
