@@ -637,16 +637,11 @@ export default class Editor {
     const deferredTransormation = (_d: Float32Array, _w: number, _h: number) =>
       transformationFn(_d, _w, _h, ...args)
 
-    console.log(transformationFn.name, transformationFn.displayName)
-
     this._transformationCache.push({
       name: transformationFn.name,
       transformationFn: deferredTransormation,
       applyToAll: this._applyToAll,
     })
-    console.log(this._transformationCache)
-
-    /* this.updateActivation(newData, deferredTransormation) */
   }
 
   private applyRect(coords: RectCoords, fillFn: FillFn) {
@@ -698,7 +693,6 @@ export default class Editor {
         ? clientY - tooltipHeight - 10
         : clientY + 10
 
-    console.log(offsetY, clientY + tooltipHeight)
     this.tooltipCont.style.left = `${clientX + 10}px`
     this.tooltipCont.style.top = `${offsetY}px`
   }
