@@ -76,6 +76,7 @@ export const rotate = (
 
   return newData
 }
+rotate.displayName = 'Rotate'
 
 export const scale = (
   input: Float32Array,
@@ -109,6 +110,7 @@ export const scale = (
 
   return scaledPixels
 }
+scale.displayName = 'Scale'
 
 export const fill = (
   input: Float32Array,
@@ -118,6 +120,7 @@ export const fill = (
 ): Float32Array => {
   return input.fill(color)
 }
+fill.displayName = 'Fill'
 
 export const rect = (
   input: Float32Array,
@@ -142,3 +145,4 @@ export const rect = (
 
   return input
 }
+rect.displayName = 'Fill Rect'

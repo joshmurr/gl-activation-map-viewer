@@ -206,6 +206,26 @@ reset {
     justify-content: center;
     position: relative;
     gap: 0.8em;
+
+    &:nth-child(3) {
+      margin-top: 0.8em;
+    }
+  }
+
+  .commit {
+    background-color: $lime-200;
+
+    &:hover {
+      background-color: $lime-300;
+    }
+  }
+
+  .cancel {
+    background-color: $slate-400;
+
+    &:hover {
+      background-color: $slate-500;
+    }
   }
 
   .color-picker {
@@ -250,6 +270,10 @@ reset {
   filter: $button-pressed !important;
   transform: translate($button-offset, $button-offset) !important;
   background: $accent !important;
+
+  &:after {
+    content: ' \02713';
+  }
 }
 
 .tooltip {

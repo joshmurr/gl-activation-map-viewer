@@ -9,7 +9,6 @@ import {
 
 import { fill, rect, rotate, scale } from './transformations'
 import { act2ImageData } from './conversions'
-import { TypedArray } from './typedArrays'
 import { getLayerDims, swapClasses } from './utils'
 
 type Callback = (e?: MouseEvent) => void
@@ -34,7 +33,7 @@ export default class Editor {
   private tooltipCont: HTMLElement
   private SHIFT = false
   private _needsUpdate = false
-  private _applyToAll = false
+  private _applyToAll = true
   private currentActSelection: ActivationSelection
   private _brushSize = 3
   private _scaleFactor = 1
@@ -44,6 +43,11 @@ export default class Editor {
   private _sliders: HTMLInputElement[] = []
   private _nFillColors = 10
   private _fillColor = 'rgb(0, 0, 0)'
+  private _transformationCache: {
+    name: string
+    transformationFn: TransformationFn
+    applyToAll: boolean
+  }[] = []
 
   constructor() {
     this.buildContainer()
@@ -64,15 +68,56 @@ export default class Editor {
     const topRow = document.createElement('div')
     const bottomRow = document.createElement('div')
 
+    const finalRow = document.createElement('div')
+
     topRow.classList.add('row')
     bottomRow.classList.add('row')
+    finalRow.classList.add('row')
 
     const buttons = [
       {
-        text: '&check;',
-        parent: this.editor,
-        id: 'close',
-        callbacks: [['click', () => this.hideDisplay()]],
+        text: 'Cancel',
+        parent: finalRow,
+        id: 'cancel',
+        classList: ['cancel'],
+        callbacks: [
+          [
+            'click',
+            () => {
+              this._transformationCache = []
+              this.hideDisplay()
+            },
+          ],
+        ],
+      },
+      {
+        text: 'Commit Changes',
+        parent: finalRow,
+        id: 'commit',
+        classList: ['commit'],
+        callbacks: [
+          [
+            'click',
+            () => {
+              this.updateActivation()
+              this.hideDisplay()
+            },
+          ],
+          [
+            'mouseover',
+            () =>
+              this.showTooltip(
+                this._transformationCache.reduce(
+                  (output, { name, applyToAll }) => {
+                    return output + `${name}${applyToAll ? ' stack\n' : '\n'}`
+                  },
+                  'Current Transformations:\n',
+                ) as string,
+              ),
+          ],
+          ['mouseout', () => this.hideTooltip()],
+          ['mousemove', (e: MouseEvent) => this.updateTooltip(e)],
+        ],
       },
       {
         text: 'Fill',
@@ -101,7 +146,8 @@ export default class Editor {
       {
         text: 'Apply to Stack',
         parent: topRow,
-        id: 'all',
+        id: 'apply-to-all',
+        classList: ['active'],
         callbacks: [
           ['click', () => this.toggleApplyToAll()],
           [
@@ -117,8 +163,8 @@ export default class Editor {
       },
     ]
 
-    buttons.forEach(({ text, parent, callbacks, id }) =>
-      this.addButton(text, parent, callbacks, id),
+    buttons.forEach(({ text, parent, callbacks, id, classList }) =>
+      this.addButton(text, parent, callbacks, id, classList),
     )
 
     const colorPicker = this.makeColorPicker()
@@ -211,6 +257,7 @@ export default class Editor {
     editorWrapper.appendChild(canvasCont)
     this.tools.appendChild(topRow)
     this.tools.appendChild(bottomRow)
+    this.tools.appendChild(finalRow)
     editorWrapper.appendChild(this.tools)
 
     this.editor.appendChild(editorWrapper)
@@ -287,6 +334,7 @@ export default class Editor {
     parent: HTMLElement,
     callbacks: NamedCallback[],
     id?: string,
+    classList?: string[],
   ) {
     const button = document.createElement('button')
     button.type = 'button'
@@ -298,6 +346,7 @@ export default class Editor {
       button.addEventListener(type, cb)
     }
     if (id) button.id = id
+    if (classList) button.classList.add(...classList)
     parent.appendChild(button)
 
     this._buttons.push(button)
@@ -425,7 +474,7 @@ export default class Editor {
 
   public hideDisplay() {
     swapClasses(this.editor, 'show', 'hide')
-    this.toggleApplyToAll(false)
+    /* this.toggleApplyToAll(false) */
     if (this.canvas) {
       this.canvas.removeEventListener('click', this.draw)
     }
@@ -518,23 +567,29 @@ export default class Editor {
     this.overlayCtx.closePath()
   }
 
-  private updateActivation(
-    newData: Float32Array,
-    transformation: (...args: unknown[]) => TypedArray,
-  ) {
+  private updateActivation /* newData: Float32Array, */ /* transformation: (...args: unknown[]) => TypedArray, */() {
     if (!this.currentActSelection) return
     const { width, height } = this.canvas
 
-    if (this._applyToAll) {
-      this.currentActSelection.layer.activations.forEach((quad) => {
-        const newData = transformation(quad.data, width, height) as Float32Array
+    this._transformationCache.forEach(({ transformationFn, applyToAll }) => {
+      if (applyToAll) {
+        this.currentActSelection.layer.activations.forEach((quad) => {
+          const newData = transformationFn(
+            quad.data,
+            width,
+            height,
+          ) as Float32Array
+          quad.update(newData)
+        })
+      } else {
+        const { relativeId, layer } = this.currentActSelection
+        const quad = layer.activations[relativeId]
+        const newData = transformationFn(quad.data, width, height)
         quad.update(newData)
-      })
-    } else {
-      const { relativeId, layer } = this.currentActSelection
-      const quad = layer.activations[relativeId]
-      quad.update(newData)
-    }
+      }
+    })
+
+    this._transformationCache = []
   }
 
   public remakeActivation(layer: LayerInfo, { data_format }: ModelInfo) {
@@ -582,7 +637,16 @@ export default class Editor {
     const deferredTransormation = (_d: Float32Array, _w: number, _h: number) =>
       transformationFn(_d, _w, _h, ...args)
 
-    this.updateActivation(newData, deferredTransormation)
+    console.log(transformationFn.name, transformationFn.displayName)
+
+    this._transformationCache.push({
+      name: transformationFn.name,
+      transformationFn: deferredTransormation,
+      applyToAll: this._applyToAll,
+    })
+    console.log(this._transformationCache)
+
+    /* this.updateActivation(newData, deferredTransormation) */
   }
 
   private applyRect(coords: RectCoords, fillFn: FillFn) {
@@ -612,7 +676,9 @@ export default class Editor {
 
   private toggleApplyToAll(force?: boolean) {
     this._applyToAll = typeof force === 'boolean' ? force : !this._applyToAll
-    document.getElementById('all').classList.toggle('active', this._applyToAll)
+    document
+      .getElementById('apply-to-all')
+      .classList.toggle('active', this._applyToAll)
   }
 
   private showTooltip(message: string) {
@@ -626,8 +692,15 @@ export default class Editor {
 
   private updateTooltip(event: MouseEvent) {
     const { clientX, clientY } = event
+    const { offsetHeight: tooltipHeight } = this.tooltipCont
+    const offsetY =
+      clientY + tooltipHeight + 30 > window.innerHeight
+        ? clientY - tooltipHeight - 10
+        : clientY + 10
+
+    console.log(offsetY, clientY + tooltipHeight)
     this.tooltipCont.style.left = `${clientX + 10}px`
-    this.tooltipCont.style.top = `${clientY + 10}px`
+    this.tooltipCont.style.top = `${offsetY}px`
   }
 
   public get applyToAll() {
