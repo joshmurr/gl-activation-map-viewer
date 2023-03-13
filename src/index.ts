@@ -155,11 +155,9 @@ async function init() {
       if (MODEL_INFO.data_format === 'channels_first') {
         await gen.displayOutTranspose(logits, gui.output.base)
         currentZ.dispose()
-        logits.dispose()
       } else {
         await gen.displayOut(logits, gui.output.base)
         currentZ.dispose()
-        logits.dispose()
       }
 
       randBtn.innerText = 'Random'
