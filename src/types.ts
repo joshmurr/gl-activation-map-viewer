@@ -1,6 +1,9 @@
+import { UniformDescs } from 'gl-handler/lib/types'
+import type { Quad as GLQuad } from 'gl-handler'
 import type Quad from './Quad'
 
 export interface ModelInfo {
+  name: string
   description: string
   url: string
   size: number
@@ -61,6 +64,13 @@ export interface ActivationSelection {
   relativeId: number
   layerName: string
   layer: LayerInfo
+}
+
+export interface QuadDesc {
+  quad: GLQuad
+  uid: number[]
+  uniforms: UniformDescs
+  animations: unknown
 }
 
 export type RectCoords = [number, number, number, number]

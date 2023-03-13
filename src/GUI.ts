@@ -4,8 +4,8 @@ export default class GUI {
   private container: HTMLElement
   private display: HTMLElement
   private sidebar: HTMLElement
-  private outputSurfaces: { [key: string]: HTMLCanvasElement }
-  private checkboxes: { [key: string]: HTMLInputElement }
+  private _outputSurfaces: { [key: string]: HTMLCanvasElement }
+  private _checkboxes: { [key: string]: HTMLInputElement }
   private _sliders: { [key: string]: HTMLInputElement }
 
   constructor(sidebarEl: HTMLElement) {
@@ -23,8 +23,8 @@ export default class GUI {
 
     this.container.appendChild(this.display)
 
-    this.outputSurfaces = {}
-    this.checkboxes = {}
+    this._outputSurfaces = {}
+    this._checkboxes = {}
     this._sliders = {}
   }
 
@@ -40,7 +40,7 @@ export default class GUI {
   public initCheckboxes(checkboxes: Checkbox[]) {
     checkboxes.forEach(({ name, selector }) => {
       const checkboxEl = document.querySelector(selector)
-      this.checkboxes[name] = checkboxEl as HTMLInputElement
+      this._checkboxes[name] = checkboxEl as HTMLInputElement
     })
   }
 
@@ -102,7 +102,7 @@ export default class GUI {
 
     if (callback) canvas.addEventListener('click', callback)
 
-    this.outputSurfaces[ref] = canvas
+    this._outputSurfaces[ref] = canvas
   }
 
   public clearEventListeners(oldElement: Element) {
@@ -112,7 +112,7 @@ export default class GUI {
   }
 
   public get output() {
-    return this.outputSurfaces
+    return this._outputSurfaces
   }
 
   public get sliders() {

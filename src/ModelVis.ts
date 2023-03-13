@@ -26,6 +26,19 @@ export default class ModelVis {
     this.layerOutputs = this.model.getLayerOutputs(this._tfLayers, z)
   }
 
+  public destroy() {
+    if (!this._layers) return
+    this._layers.forEach(({ activations }) => {
+      activations.forEach((mesh) => mesh.destroy())
+    })
+    this._layers = []
+    if (!this.layerOutputs) return
+    this._tfLayers = []
+    this.layerNames = []
+    tf.dispose(this.layerOutputs)
+    this.layerOutputs = {}
+  }
+
   private separateActivations(act: tf.Tensor, data_format: string) {
     const activations = []
 
@@ -99,6 +112,7 @@ export default class ModelVis {
           offset,
         )
         layerInfo.activations.push(activation)
+        act.dispose()
       })
       this._layers.push(layerInfo)
       offset +=
@@ -120,6 +134,7 @@ export default class ModelVis {
       const data = act.dataSync()
       const quad = layer.activations[actIdx]
       quad.update(data)
+      act.dispose()
     })
   }
 
