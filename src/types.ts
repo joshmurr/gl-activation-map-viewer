@@ -12,10 +12,21 @@ export interface ModelInfo {
   data_format: string
 }
 
+export type MouseCallback = (e?: MouseEvent) => void
+export type NamedCallback = [name: string, cb: MouseCallback]
+
 export interface Button {
   selector: string
   eventListener: string
   callback: () => void
+}
+
+export interface EditorButton {
+  text: string
+  parent: HTMLElement
+  id: string | null
+  classList?: string[]
+  callbacks?: NamedCallback[]
 }
 
 export interface Dropdown {

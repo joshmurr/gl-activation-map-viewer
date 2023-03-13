@@ -169,6 +169,8 @@ async function init() {
       '.predict-btn',
     ) as HTMLButtonElement
     predictBtn.innerText = 'Loading...'
+    editor.changesMade = false
+    predictBtn.classList.remove('look-at-me')
 
     waitForRepaint(() => {
       return tf.tidy(() => {
@@ -247,6 +249,13 @@ async function init() {
   gui.initAccordions(accordions)
 
   function draw(time: number) {
+    if (editor.changesMade) {
+      const predictBtn = document.querySelector(
+        '.predict-btn',
+      ) as HTMLButtonElement
+      predictBtn.classList.add('look-at-me')
+    }
+
     // PICKING ----------------------
     gl.useProgram(pickProgram)
     gl.clearColor(1, 1, 1, 1)
@@ -383,8 +392,6 @@ async function init() {
   else gen.displayOut(act, gui.output.base)
 
   /* function loadModel() {
-
-
     // This unfortunately was just more hassle than it was worth.
     // All the callbacks in the app mean was just too much of a pain to
     // track down all the dangling refs to various arrays of arrays of objects.

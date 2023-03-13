@@ -4,6 +4,20 @@ import { FillFn, RectCoords } from './types'
 const cos = Math.cos
 const sin = Math.sin
 
+export interface TransformationFn {
+  displayName: string
+  (
+    data: Float32Array,
+    width: number,
+    height: number,
+    ...args: unknown[]
+  ): Float32Array
+}
+
+export interface DeferredTransformationFn {
+  (data: Float32Array, width: number, height: number): TransformationFn
+}
+
 export const xy2contig = (
   /**
    * Converts XY coord to contiguous array index
@@ -44,7 +58,7 @@ export const sliceRow = (
   return array.slice(idx, idx + nChannels * sliceLen)
 }
 
-export const rotate = (
+export const rotate: TransformationFn = (
   input: Float32Array,
   width: number,
   height: number,
@@ -78,7 +92,7 @@ export const rotate = (
 }
 rotate.displayName = 'Rotate'
 
-export const scale = (
+export const scale: TransformationFn = (
   input: Float32Array,
   width: number,
   height: number,
@@ -112,7 +126,7 @@ export const scale = (
 }
 scale.displayName = 'Scale'
 
-export const fill = (
+export const fill: TransformationFn = (
   input: Float32Array,
   width: number,
   height: number,
@@ -122,7 +136,7 @@ export const fill = (
 }
 fill.displayName = 'Fill'
 
-export const rect = (
+export const rect: TransformationFn = (
   input: Float32Array,
   width: number,
   height: number,

@@ -1,24 +1,17 @@
 import * as tf from '@tensorflow/tfjs'
 import {
   ActivationSelection,
+  EditorButton,
   FillFn,
   LayerInfo,
   ModelInfo,
+  NamedCallback,
   RectCoords,
 } from './types'
 
-import { fill, rect, rotate, scale } from './transformations'
+import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
 import { getLayerDims, swapClasses } from './utils'
-
-type Callback = (e?: MouseEvent) => void
-type NamedCallback = [name: string, cb: Callback]
-type TransformationFn = (
-  data: Float32Array,
-  width: number,
-  height: number,
-  ...args: unknown[]
-) => Float32Array
 
 export default class Editor {
   private editor: HTMLElement
@@ -48,6 +41,7 @@ export default class Editor {
     transformationFn: TransformationFn
     applyToAll: boolean
   }[] = []
+  private _changesMade = false
 
   constructor() {
     this.buildContainer()
@@ -74,7 +68,7 @@ export default class Editor {
     bottomRow.classList.add('row')
     finalRow.classList.add('row')
 
-    const buttons = [
+    const buttons: EditorButton[] = [
       {
         text: 'Cancel',
         parent: finalRow,
@@ -112,7 +106,7 @@ export default class Editor {
                     return output + `${name}${applyToAll ? ' stack\n' : '\n'}`
                   },
                   'Current Transformations:\n',
-                ) as string,
+                ),
               ),
           ],
           ['mouseout', () => this.hideTooltip()],
@@ -408,7 +402,7 @@ export default class Editor {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       this._fillColor = target.style.backgroundColor
-      this.emptySiblings(target)
+      this.removeClassFromSiblings(target, 'chosen')
       target.classList.add('chosen')
     }
 
@@ -444,15 +438,11 @@ export default class Editor {
     return container
   }
 
-  private emptySiblings(el: HTMLElement) {
-    const emptySibling = (sibling: ChildNode) => {
-      if (!sibling) return
-      sibling.classList.remove('chosen')
-      emptySibling(sibling.nextSibling)
+  private removeClassFromSiblings(el: HTMLElement, className: string) {
+    const siblings = el.parentNode.children
+    for (const child of siblings) {
+      child.classList.remove(className)
     }
-
-    const firstSibling = el.parentNode.firstChild
-    emptySibling(firstSibling)
   }
 
   private handleKeyDown(e: KeyboardEvent) {
@@ -491,22 +481,6 @@ export default class Editor {
     const currentStatus = this._needsUpdate
     this._needsUpdate = false
     return currentStatus
-  }
-
-  private text2Colour(colour: string): number {
-    switch (colour) {
-      case 'black':
-        return 5
-      case 'white':
-        return 250
-      case 'grey':
-      default:
-        return 128
-    }
-  }
-
-  private text2FloatColour(colour: string) {
-    return this.text2Colour(colour) / 255
   }
 
   private rgbStringToFloatColours(rgbString: string) {
@@ -567,18 +541,14 @@ export default class Editor {
     this.overlayCtx.closePath()
   }
 
-  private updateActivation /* newData: Float32Array, */ /* transformation: (...args: unknown[]) => TypedArray, */() {
+  private updateActivation() {
     if (!this.currentActSelection) return
     const { width, height } = this.canvas
 
     this._transformationCache.forEach(({ transformationFn, applyToAll }) => {
       if (applyToAll) {
         this.currentActSelection.layer.activations.forEach((quad) => {
-          const newData = transformationFn(
-            quad.data,
-            width,
-            height,
-          ) as Float32Array
+          const newData = transformationFn(quad.data, width, height)
           quad.update(newData)
         })
       } else {
@@ -590,6 +560,7 @@ export default class Editor {
     })
 
     this._transformationCache = []
+    this._changesMade = true
   }
 
   public remakeActivation(layer: LayerInfo, { data_format }: ModelInfo) {
@@ -636,9 +607,10 @@ export default class Editor {
 
     const deferredTransormation = (_d: Float32Array, _w: number, _h: number) =>
       transformationFn(_d, _w, _h, ...args)
+    deferredTransormation.displayName = transformationFn.displayName
 
     this._transformationCache.push({
-      name: transformationFn.name,
+      name: transformationFn.displayName,
       transformationFn: deferredTransormation,
       applyToAll: this._applyToAll,
     })
@@ -711,5 +683,12 @@ export default class Editor {
 
   public get displayCanvas() {
     return this.canvas
+  }
+
+  public get changesMade() {
+    return this._changesMade
+  }
+  public set changesMade(val: boolean) {
+    this._changesMade = val
   }
 }
