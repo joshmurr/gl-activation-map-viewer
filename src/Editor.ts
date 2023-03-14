@@ -31,7 +31,6 @@ export default class Editor {
   private _brushSize = 3
   private _scaleFactor = 1
   private _overlayGridScaleFactor = 10
-  private rotationCounter = 1
   private _buttons: HTMLButtonElement[] = []
   private _sliders: HTMLInputElement[] = []
   private _nFillColors = 10
@@ -40,6 +39,7 @@ export default class Editor {
     name: string
     transformationFn: TransformationFn
     applyToAll: boolean
+    args: unknown[]
   }[] = []
   private _changesMade = false
 
@@ -99,15 +99,7 @@ export default class Editor {
           ],
           [
             'mouseover',
-            () =>
-              this.showTooltip(
-                this._transformationCache.reduce(
-                  (output, { name, applyToAll }) => {
-                    return output + `${name}${applyToAll ? ' stack\n' : '\n'}`
-                  },
-                  'Current Transformations:\n',
-                ),
-              ),
+            () => this.showTooltip(this.stringifyTransformationCache()),
           ],
           ['mouseout', () => this.hideTooltip()],
           ['mousemove', (e: MouseEvent) => this.updateTooltip(e)],
@@ -263,7 +255,6 @@ export default class Editor {
   }
 
   public show(currentAct: ActivationSelection, { data_format }: ModelInfo) {
-    this.rotationCounter = 1
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = getLayerDims(layer.shape, data_format)
@@ -613,7 +604,10 @@ export default class Editor {
       name: transformationFn.displayName,
       transformationFn: deferredTransormation,
       applyToAll: this._applyToAll,
+      args: args,
     })
+
+    console.log(this._transformationCache)
   }
 
   private applyRect(coords: RectCoords, fillFn: FillFn) {
@@ -626,7 +620,7 @@ export default class Editor {
   }
 
   private rotate() {
-    const angle = (Math.PI / 2) * this.rotationCounter++
+    const angle = Math.PI / 2
     this.genericTransformation(rotate, angle)
   }
 
@@ -667,6 +661,15 @@ export default class Editor {
 
     this.tooltipCont.style.left = `${clientX + 10}px`
     this.tooltipCont.style.top = `${offsetY}px`
+  }
+
+  private stringifyTransformationCache() {
+    /* TODO: Write a transformation reducer which includes the arguments to the fn. */
+    /* So scale with '1.5' becomes "Scale by a factor of 1.5" */
+
+    return this._transformationCache.reduce((output, { name, applyToAll }) => {
+      return output + `${name}${applyToAll ? ' stack\n' : '\n'}`
+    }, 'Pending Transformations:\n')
   }
 
   public get applyToAll() {
