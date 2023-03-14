@@ -12,6 +12,7 @@ import {
 import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
 import { getLayerDims, swapClasses } from './utils'
+import Draggable from './Draggable'
 
 type TransformationCache = {
   name: string
@@ -22,7 +23,6 @@ type TransformationCache = {
 
 export default class Editor {
   private editor: HTMLElement
-  private activationsCont: HTMLElement
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
 
@@ -47,9 +47,8 @@ export default class Editor {
 
   constructor() {
     this.buildContainer()
-    this.activationsCont = document.createElement('div')
-    this.activationsCont.id = 'activations'
-    document.body.appendChild(this.activationsCont)
+
+    const draggable = new Draggable()
   }
 
   private buildContainer() {
@@ -608,8 +607,6 @@ export default class Editor {
       applyToAll: this._applyToAll,
       args: args,
     })
-
-    console.log(this._transformationCache)
   }
 
   private applyRect(coords: RectCoords, fillFn: FillFn, ...args: unknown[]) {
@@ -666,9 +663,6 @@ export default class Editor {
   }
 
   private stringifyTransformationCache() {
-    /* TODO: Write a transformation reducer which includes the arguments to the fn. */
-    /* So scale with '1.5' becomes "Scale by a factor of 1.5" */
-
     const transformationDescriptionReducer = ({
       name,
       args,
@@ -689,7 +683,6 @@ export default class Editor {
 
     return this._transformationCache.reduce(
       (output, { name, applyToAll, args }) => {
-        console.log(name, args)
         return (
           output +
           `${transformationDescriptionReducer({ name, args })}${
