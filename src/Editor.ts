@@ -12,7 +12,6 @@ import {
 import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
 import { getLayerDims, swapClasses } from './utils'
-import Draggable from './Draggable'
 
 type TransformationCache = {
   name: string
@@ -47,8 +46,6 @@ export default class Editor {
 
   constructor() {
     this.buildContainer()
-
-    const draggable = new Draggable()
   }
 
   private buildContainer() {

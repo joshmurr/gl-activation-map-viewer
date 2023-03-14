@@ -1,27 +1,25 @@
 import { Accordion, Button, Checkbox, Dropdown, Slider } from './types'
 
+import Draggable from './Draggable'
+
 export default class GUI {
-  private container: HTMLElement
-  private display: HTMLElement
   private sidebar: HTMLElement
   private _outputSurfaces: { [key: string]: HTMLCanvasElement }
   private _checkboxes: { [key: string]: HTMLInputElement }
   private _sliders: { [key: string]: HTMLInputElement }
 
   constructor(sidebarEl: HTMLElement) {
-    this.container = document.querySelector('.container')
-    this.display = document.createElement('div')
-    this.display.classList.add('display')
-    this.sidebar = sidebarEl
+    const container = document.querySelector('.container')
+
+    const draggable = new Draggable(sidebarEl)
+    this.sidebar = draggable.container
 
     if (!this.sidebar) {
       this.sidebar = document.createElement('div')
-      this.container.appendChild(this.sidebar)
+      container.appendChild(this.sidebar)
     }
 
     this.sidebar.classList.add('sidebar')
-
-    this.container.appendChild(this.display)
 
     this._outputSurfaces = {}
     this._checkboxes = {}

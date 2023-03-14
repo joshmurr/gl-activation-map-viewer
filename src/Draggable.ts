@@ -1,33 +1,47 @@
+function toNumber(val: string) {
+  return Number(val.replace('%', ''))
+}
+
 export default class Draggable {
-  private _container: HTMLDivElement
-  private _pos: {
-    x1: number
-    y1: number
-    x2: number
-    y2: number
+  private _container: HTMLElement
+  private _pos = {
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 0,
   }
 
-  constructor() {
-    this._pos = {
-      x1: 0,
-      y1: 0,
-      x2: 0,
-      y2: 0,
-    }
-
-    this._container = document.createElement('div')
+  constructor(target?: HTMLElement) {
+    const parent = document.querySelector('.container') as HTMLElement
+    this._container = target || document.createElement('div')
     this._container.classList.add('draggable')
+    const draggableEl = document.querySelector('.draggable') as HTMLElement
 
-    function closeDragElement() {
-      // stop moving when mouse button is released:
+    draggableEl.style.top = '0%'
+    draggableEl.style.left = '78%'
+
+    const closeDragElement = () => {
       document.onmouseup = null
       document.onmousemove = null
     }
 
+    function percentageToPixel(x: number, y: number) {
+      return {
+        x: parent.offsetWidth * (x / 100),
+        y: parent.offsetHeight * (y / 100),
+      }
+    }
+    function pixelToPercentage(x: number, y: number) {
+      return {
+        y: (y / parent.offsetHeight) * 100,
+        x: (x / parent.offsetWidth) * 100,
+      }
+    }
+
     const handleMouseDown = (e: MouseEvent) => {
       e.preventDefault()
-      this._pos.x1 = e.clientX
-      this._pos.y1 = e.clientY
+      this._pos.x2 = e.clientX
+      this._pos.y2 = e.clientY
 
       document.onmouseup = closeDragElement
       document.onmousemove = handleDrag
@@ -40,14 +54,25 @@ export default class Draggable {
       this._pos.x2 = e.clientX
       this._pos.y2 = e.clientY
 
-      const draggableEl = document.querySelector('.draggable') as HTMLElement
-
-      draggableEl.style.top = draggableEl.offsetTop - this._pos.y1 + 'px'
-      draggableEl.style.left = draggableEl.offsetLeft - this._pos.x1 + 'px'
+      const pixelPosition = percentageToPixel(
+        toNumber(draggableEl.style.left),
+        toNumber(draggableEl.style.top),
+      )
+      const top = pixelPosition.y - this._pos.y1
+      const left = pixelPosition.x - this._pos.x1
+      const percentagePosition = pixelToPercentage(left, top)
+      draggableEl.style.top = percentagePosition.y + '%'
+      draggableEl.style.left = percentagePosition.x + '%'
     }
 
     this._container.addEventListener('mousedown', handleMouseDown)
+  }
 
-    document.querySelector('.container').appendChild(this._container)
+  public appendChild(el: HTMLElement) {
+    this._container.appendChild(el)
+  }
+
+  public get container() {
+    return this._container
   }
 }

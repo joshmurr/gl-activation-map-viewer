@@ -66,6 +66,9 @@ reset {
   }
 
   .sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
     padding: 1rem;
     border-radius: 0.5rem;
     background: $modal-bg;
@@ -332,8 +335,4 @@ section {
 
 .draggable {
   position: absolute;
-  width: 200px;
-  height: 200px;
-  background-color: red;
-  z-index: 1000;
 }
