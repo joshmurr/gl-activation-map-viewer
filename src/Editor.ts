@@ -13,6 +13,13 @@ import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
 import { getLayerDims, swapClasses } from './utils'
 
+type TransformationCache = {
+  name: string
+  transformationFn: TransformationFn
+  applyToAll: boolean
+  args: unknown[]
+}
+
 export default class Editor {
   private editor: HTMLElement
   private activationsCont: HTMLElement
@@ -35,12 +42,7 @@ export default class Editor {
   private _sliders: HTMLInputElement[] = []
   private _nFillColors = 10
   private _fillColor = 'rgb(0, 0, 0)'
-  private _transformationCache: {
-    name: string
-    transformationFn: TransformationFn
-    applyToAll: boolean
-    args: unknown[]
-  }[] = []
+  private _transformationCache: TransformationCache[] = []
   private _changesMade = false
 
   constructor() {
@@ -580,7 +582,7 @@ export default class Editor {
 
     const colourValue = this.rgbStringToFloatColours(colour)
     const fillFn = (_: number) => colourValue
-    this.applyRect(coords, fillFn)
+    this.applyRect(coords, fillFn, colourValue)
   }
 
   private genericTransformation(
@@ -610,8 +612,8 @@ export default class Editor {
     console.log(this._transformationCache)
   }
 
-  private applyRect(coords: RectCoords, fillFn: FillFn) {
-    this.genericTransformation(rect, coords, fillFn)
+  private applyRect(coords: RectCoords, fillFn: FillFn, ...args: unknown[]) {
+    this.genericTransformation(rect, coords, fillFn, args)
   }
 
   private fill(colour: string) {
@@ -667,9 +669,36 @@ export default class Editor {
     /* TODO: Write a transformation reducer which includes the arguments to the fn. */
     /* So scale with '1.5' becomes "Scale by a factor of 1.5" */
 
-    return this._transformationCache.reduce((output, { name, applyToAll }) => {
-      return output + `${name}${applyToAll ? ' stack\n' : '\n'}`
-    }, 'Pending Transformations:\n')
+    const transformationDescriptionReducer = ({
+      name,
+      args,
+    }: Omit<TransformationCache, 'transformationFn' | 'applyToAll'>) => {
+      switch (name) {
+        case 'Scale':
+          return `Scaling by a factor of ${(args[0] as number).toFixed(2)}`
+        case 'Rotate':
+          return `Rotating ${args[0]} times.`
+        case 'Fill':
+          return `Filling entire image with ${(args[0] as number).toFixed(2)}`
+        case 'Fill Rect':
+          return `Drawing a rectangle with colour ${(
+            (args[args.length - 1] as number[])[0] as number
+          ).toFixed(2)}`
+      }
+    }
+
+    return this._transformationCache.reduce(
+      (output, { name, applyToAll, args }) => {
+        console.log(name, args)
+        return (
+          output +
+          `${transformationDescriptionReducer({ name, args })}${
+            applyToAll ? ' stack\n' : '\n'
+          }`
+        )
+      },
+      'Pending Transformations:\n',
+    )
   }
 
   public get applyToAll() {
