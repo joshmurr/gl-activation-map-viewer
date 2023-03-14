@@ -53,6 +53,7 @@ let mouseOnSlice = false
 let oldPickNdx = -1
 
 let gen: Generator
+let currentZ: tf.Tensor2D
 
 const gui = new GUI(document.querySelector('.sidebar'))
 const base = document.getElementById('model-base-output') as HTMLCanvasElement
@@ -146,7 +147,7 @@ async function init() {
        * so that we can render it in the gui callbacks above using
        * `initialAct`.
        */
-      const currentZ = tf.randomNormal([1, MODEL_INFO.latent_dim]) as Tensor2D
+      currentZ = tf.randomNormal([1, MODEL_INFO.latent_dim]) as Tensor2D
       const logits = gen.run(currentZ) as tf.Tensor
       vis.update(currentZ)
       layers = vis.getActivations(G, program, MODEL_INFO)
@@ -154,10 +155,10 @@ async function init() {
 
       if (MODEL_INFO.data_format === 'channels_first') {
         await gen.displayOutTranspose(logits, gui.output.base)
-        currentZ.dispose()
+        /* currentZ.dispose() */
       } else {
         await gen.displayOut(logits, gui.output.base)
-        currentZ.dispose()
+        /* currentZ.dispose() */
       }
 
       randBtn.innerText = 'Random'
@@ -174,6 +175,7 @@ async function init() {
 
     waitForRepaint(() => {
       return tf.tidy(() => {
+        /* TODO: Run normally if no changes have been made */
         const tfLayers = vis.tfLayers
         const layer = currentActSelection.layer
           ? currentActSelection.layer
@@ -187,9 +189,8 @@ async function init() {
 
         const activations = gen.runLayersGen(sliced, act, idx)
 
-        let logits = null
-
         let layerIdx = idx
+        let logits = null
         const layerOffset = Math.abs(tfLayers.length - layers.length)
         for ({ logits, layerIdx } of activations) {
           const layer = layers[layerIdx - layerOffset]
