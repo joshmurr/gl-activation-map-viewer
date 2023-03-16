@@ -1,5 +1,4 @@
 import { Accordion, Button, Checkbox, Dropdown, Slider } from './types'
-
 import Draggable from './Draggable'
 
 export default class GUI {
@@ -11,7 +10,7 @@ export default class GUI {
   constructor(sidebarEl: HTMLElement) {
     const container = document.querySelector('.container')
 
-    const draggable = new Draggable(sidebarEl)
+    const draggable = new Draggable({ top: '0%', left: '78%' }, sidebarEl)
     this.sidebar = draggable.container
 
     if (!this.sidebar) {

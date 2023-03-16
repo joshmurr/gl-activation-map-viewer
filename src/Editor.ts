@@ -8,6 +8,7 @@ import {
   NamedCallback,
   RectCoords,
 } from './types'
+import Draggable from './Draggable'
 
 import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
@@ -49,7 +50,8 @@ export default class Editor {
   }
 
   private buildContainer() {
-    this.editor = document.createElement('div')
+    const draggable = new Draggable({ top: '0%', left: '0%' })
+    this.editor = draggable.container //document.createElement('div')
     this.editor.id = 'editor'
     const editorWrapper = document.createElement('div')
     editorWrapper.classList.add('editor-wrapper')

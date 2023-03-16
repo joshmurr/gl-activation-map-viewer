@@ -2,6 +2,13 @@ function toNumber(val: string) {
   return Number(val.replace('%', ''))
 }
 
+type StylePos = {
+  left?: string
+  top?: string
+  right?: string
+  bottom?: string
+}
+
 export default class Draggable {
   private _container: HTMLElement
   private _pos = {
@@ -11,14 +18,21 @@ export default class Draggable {
     y2: 0,
   }
 
-  constructor(target?: HTMLElement) {
+  /* FIXME: This top/left or right/bottom malarky is stupid */
+  constructor(cssPos: StylePos, target?: HTMLElement) {
     const parent = document.querySelector('.container') as HTMLElement
     this._container = target || document.createElement('div')
     this._container.classList.add('draggable')
-    const draggableEl = document.querySelector('.draggable') as HTMLElement
 
-    draggableEl.style.top = '0%'
-    draggableEl.style.left = '78%'
+    const leftTop = cssPos.left !== undefined
+
+    if (leftTop) {
+      this._container.style.top = cssPos.top
+      this._container.style.left = cssPos.left
+    } else {
+      this._container.style.bottom = cssPos.bottom
+      this._container.style.right = cssPos.right
+    }
 
     const closeDragElement = () => {
       document.onmouseup = null
@@ -54,15 +68,29 @@ export default class Draggable {
       this._pos.x2 = e.clientX
       this._pos.y2 = e.clientY
 
-      const pixelPosition = percentageToPixel(
-        toNumber(draggableEl.style.left),
-        toNumber(draggableEl.style.top),
-      )
-      const top = pixelPosition.y - this._pos.y1
-      const left = pixelPosition.x - this._pos.x1
-      const percentagePosition = pixelToPercentage(left, top)
-      draggableEl.style.top = percentagePosition.y + '%'
-      draggableEl.style.left = percentagePosition.x + '%'
+      const pixelPosition = leftTop
+        ? percentageToPixel(
+            toNumber(this._container.style.left),
+            toNumber(this._container.style.top),
+          )
+        : percentageToPixel(
+            toNumber(this._container.style.right),
+            toNumber(this._container.style.bottom),
+          )
+
+      if (leftTop) {
+        const top = pixelPosition.y - this._pos.y1
+        const left = pixelPosition.x - this._pos.x1
+        const percentagePosition = pixelToPercentage(left, top)
+        this._container.style.top = percentagePosition.y + '%'
+        this._container.style.left = percentagePosition.x + '%'
+      } else {
+        const bottom = pixelPosition.y + this._pos.y1
+        const right = pixelPosition.x + this._pos.x1
+        const percentagePosition = pixelToPercentage(right, bottom)
+        this._container.style.bottom = percentagePosition.y + '%'
+        this._container.style.right = percentagePosition.x + '%'
+      }
     }
 
     this._container.addEventListener('mousedown', handleMouseDown)
