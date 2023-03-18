@@ -113,3 +113,5 @@ export const getLayerDims = (shape: number[], dataFormat: string) => {
   if (dataFormat === 'channels_last') return shape.slice(1, 3)
   return shape.slice(2)
 }
+
+export const toDeg = (rad: number) => rad * 57.29578

@@ -128,8 +128,8 @@ scale.displayName = 'Scale'
 
 export const fill: TransformationFn = (
   input: Float32Array,
-  _: number,
-  __: number,
+  _width: number,
+  _height: number,
   color: number,
 ): Float32Array => {
   return input.fill(color)
@@ -139,7 +139,7 @@ fill.displayName = 'Fill'
 export const rect: TransformationFn = (
   input: Float32Array,
   width: number,
-  _: number,
+  _height: number,
   coords: RectCoords,
   fillFn: FillFn,
 ): Float32Array => {

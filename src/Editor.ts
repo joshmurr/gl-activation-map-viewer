@@ -12,7 +12,7 @@ import Draggable from './Draggable'
 
 import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
-import { getLayerDims, swapClasses } from './utils'
+import { getLayerDims, swapClasses, toDeg } from './utils'
 
 type TransformationCache = {
   name: string
@@ -409,9 +409,10 @@ export default class Editor {
       Math.floor(255 * (i / (this._nFillColors - 1))),
     )
     colors.push(255)
-    colors.forEach((color) => {
+    colors.forEach((color, i) => {
       const swatch = document.createElement('span')
       swatch.classList.add('swatch')
+      if (i === 0) swatch.classList.add('chosen')
       swatch.style.backgroundColor = `rgb(${color}, ${color}, ${color})`
 
       swatch.addEventListener('mouseover', handleMouseOver)
@@ -644,7 +645,7 @@ export default class Editor {
   }
 
   private showTooltip(message: string) {
-    this.tooltipCont.innerText = message
+    this.tooltipCont.innerHTML = message
     swapClasses(this.tooltipCont, 'hide', 'show')
   }
 
@@ -673,13 +674,14 @@ export default class Editor {
         case 'Scale':
           return `Scaling by a factor of ${(args[0] as number).toFixed(2)}`
         case 'Rotate':
-          return `Rotating ${args[0]} times.`
+          return `Rotating ${toDeg(args[0] as number).toFixed(1)}&deg;`
         case 'Fill':
           return `Filling entire image with ${(args[0] as number).toFixed(2)}`
-        case 'Fill Rect':
-          return `Drawing a rectangle with colour ${(
-            (args[args.length - 1] as number[])[0] as number
-          ).toFixed(2)}`
+        case 'Fill Rect': {
+          const colour = (args[args.length - 1] as number[])[0] as number
+          if (colour === undefined) return `Drawing with brush`
+          return `Drawing a rectangle with colour ${colour.toFixed(1)}`
+        }
       }
     }
 
@@ -688,11 +690,11 @@ export default class Editor {
         return (
           output +
           `${transformationDescriptionReducer({ name, args })}${
-            applyToAll ? ' stack\n' : '\n'
+            applyToAll ? ' *<br>' : '<br>'
           }`
         )
       },
-      'Pending Transformations:\n',
+      '<em>Pending Transformations: (* = to stack)</em><br>',
     )
   }
 
