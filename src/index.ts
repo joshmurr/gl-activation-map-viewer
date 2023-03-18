@@ -176,7 +176,6 @@ async function init() {
 
     if (!editor.changesMade) {
       return waitForRepaint(() => {
-        console.log('no changes made')
         const logits = gen.run(currentZ) as tf.Tensor
         gen.displayOutTranspose(logits, gui.output.output)
         predictBtn.innerText = 'Predict'
