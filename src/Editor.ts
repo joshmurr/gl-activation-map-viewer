@@ -44,6 +44,7 @@ export default class Editor {
   private _fillColor = 'rgb(0, 0, 0)'
   private _transformationCache: TransformationCache[] = []
   private _changesMade = false
+  private _toolsDisabled = false
 
   constructor() {
     this.buildContainer()
@@ -281,8 +282,9 @@ export default class Editor {
   }
 
   private disableTools() {
+    this._toolsDisabled = true
     this._buttons.forEach((button) => {
-      if (button.id === 'close') return
+      if (button.id === 'cancel') return
       button.disabled = true
     })
     this._sliders.forEach((slider) => {
@@ -291,6 +293,7 @@ export default class Editor {
   }
 
   private enableTools() {
+    this._toolsDisabled = false
     this._buttons.forEach((button) => {
       button.disabled = false
     })
@@ -450,6 +453,7 @@ export default class Editor {
 
   private showDisplay() {
     swapClasses(this.editor, 'hide', 'show')
+    if (this._toolsDisabled) return
     this.overlayCanvas.addEventListener('click', (e) => this.draw(e))
     this.overlayCanvas.addEventListener('mousemove', (e) => this.drawBrush(e))
 
@@ -556,6 +560,10 @@ export default class Editor {
 
     this._transformationCache = []
     this._changesMade = true
+    const predictBtn = document.querySelector(
+      '.predict-btn',
+    ) as HTMLButtonElement
+    predictBtn.classList.add('look-at-me')
   }
 
   public remakeActivation(layer: LayerInfo, { data_format }: ModelInfo) {

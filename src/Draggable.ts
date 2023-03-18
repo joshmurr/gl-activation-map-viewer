@@ -77,10 +77,7 @@ export default class Draggable {
     }
 
     const handleDrag = (e: MouseEvent) => {
-      if (!this._drag) {
-        console.log('not dragging')
-        return
-      }
+      if (!this._drag) return
       this._pos.x1 = this._pos.x2 - e.clientX
       this._pos.y1 = this._pos.y2 - e.clientY
       this._pos.x2 = e.clientX
