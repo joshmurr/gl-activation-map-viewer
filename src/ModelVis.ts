@@ -13,9 +13,8 @@ export default class ModelVis {
   private numTensors = 0
   private model: Generator
 
-  public init(model: Generator) {
+  public init(model: Generator, z: tf.Tensor2D) {
     this.model = model
-    const z = tf.randomNormal([1, model.info.latent_dim])
     this._tfLayers = model.getLayers()
     this.layerOutputs = model.getLayerOutputs(this._tfLayers, z)
     this.layerNames = Object.keys(this.layerOutputs)

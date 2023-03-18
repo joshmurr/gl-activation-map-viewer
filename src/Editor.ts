@@ -8,14 +8,21 @@ import {
   NamedCallback,
   RectCoords,
 } from './types'
+import Draggable from './Draggable'
 
 import { fill, rect, rotate, scale, TransformationFn } from './transformations'
 import { act2ImageData } from './conversions'
-import { getLayerDims, swapClasses } from './utils'
+import { getLayerDims, swapClasses, toDeg } from './utils'
+
+type TransformationCache = {
+  name: string
+  transformationFn: TransformationFn
+  applyToAll: boolean
+  args: unknown[]
+}
 
 export default class Editor {
   private editor: HTMLElement
-  private activationsCont: HTMLElement
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
 
@@ -31,27 +38,21 @@ export default class Editor {
   private _brushSize = 3
   private _scaleFactor = 1
   private _overlayGridScaleFactor = 10
-  private rotationCounter = 1
   private _buttons: HTMLButtonElement[] = []
   private _sliders: HTMLInputElement[] = []
   private _nFillColors = 10
   private _fillColor = 'rgb(0, 0, 0)'
-  private _transformationCache: {
-    name: string
-    transformationFn: TransformationFn
-    applyToAll: boolean
-  }[] = []
+  private _transformationCache: TransformationCache[] = []
   private _changesMade = false
+  private _toolsDisabled = false
 
   constructor() {
     this.buildContainer()
-    this.activationsCont = document.createElement('div')
-    this.activationsCont.id = 'activations'
-    document.body.appendChild(this.activationsCont)
   }
 
   private buildContainer() {
-    this.editor = document.createElement('div')
+    const draggable = new Draggable({ top: '0%', left: '0%' })
+    this.editor = draggable.container //document.createElement('div')
     this.editor.id = 'editor'
     const editorWrapper = document.createElement('div')
     editorWrapper.classList.add('editor-wrapper')
@@ -99,15 +100,7 @@ export default class Editor {
           ],
           [
             'mouseover',
-            () =>
-              this.showTooltip(
-                this._transformationCache.reduce(
-                  (output, { name, applyToAll }) => {
-                    return output + `${name}${applyToAll ? ' stack\n' : '\n'}`
-                  },
-                  'Current Transformations:\n',
-                ),
-              ),
+            () => this.showTooltip(this.stringifyTransformationCache()),
           ],
           ['mouseout', () => this.hideTooltip()],
           ['mousemove', (e: MouseEvent) => this.updateTooltip(e)],
@@ -174,7 +167,9 @@ export default class Editor {
         step: 1,
         value: 6,
         outputId: 'brush-size',
-        callback: () => {
+        callback: (e: MouseEvent) => {
+          /* e.stopPropagation() */
+          console.log(e)
           const el = document.querySelector(
             'input[name="brush"]',
           ) as HTMLInputElement
@@ -193,7 +188,8 @@ export default class Editor {
         step: 0.1,
         value: 1,
         outputId: 'scale-factor',
-        callback: () => {
+        callback: (e: MouseEvent) => {
+          /* e.stopPropagation() */
           const el = document.querySelector(
             'input[name="scale"]',
           ) as HTMLInputElement
@@ -263,7 +259,6 @@ export default class Editor {
   }
 
   public show(currentAct: ActivationSelection, { data_format }: ModelInfo) {
-    this.rotationCounter = 1
     this.currentActSelection = currentAct
     const { relativeId, layer } = currentAct
     const [w, h] = getLayerDims(layer.shape, data_format)
@@ -287,8 +282,9 @@ export default class Editor {
   }
 
   private disableTools() {
+    this._toolsDisabled = true
     this._buttons.forEach((button) => {
-      if (button.id === 'close') return
+      if (button.id === 'cancel') return
       button.disabled = true
     })
     this._sliders.forEach((slider) => {
@@ -297,6 +293,7 @@ export default class Editor {
   }
 
   private enableTools() {
+    this._toolsDisabled = false
     this._buttons.forEach((button) => {
       button.disabled = false
     })
@@ -415,9 +412,10 @@ export default class Editor {
       Math.floor(255 * (i / (this._nFillColors - 1))),
     )
     colors.push(255)
-    colors.forEach((color) => {
+    colors.forEach((color, i) => {
       const swatch = document.createElement('span')
       swatch.classList.add('swatch')
+      if (i === 0) swatch.classList.add('chosen')
       swatch.style.backgroundColor = `rgb(${color}, ${color}, ${color})`
 
       swatch.addEventListener('mouseover', handleMouseOver)
@@ -455,6 +453,7 @@ export default class Editor {
 
   private showDisplay() {
     swapClasses(this.editor, 'hide', 'show')
+    if (this._toolsDisabled) return
     this.overlayCanvas.addEventListener('click', (e) => this.draw(e))
     this.overlayCanvas.addEventListener('mousemove', (e) => this.drawBrush(e))
 
@@ -561,6 +560,10 @@ export default class Editor {
 
     this._transformationCache = []
     this._changesMade = true
+    const predictBtn = document.querySelector(
+      '.predict-btn',
+    ) as HTMLButtonElement
+    predictBtn.classList.add('look-at-me')
   }
 
   public remakeActivation(layer: LayerInfo, { data_format }: ModelInfo) {
@@ -589,7 +592,7 @@ export default class Editor {
 
     const colourValue = this.rgbStringToFloatColours(colour)
     const fillFn = (_: number) => colourValue
-    this.applyRect(coords, fillFn)
+    this.applyRect(coords, fillFn, colourValue)
   }
 
   private genericTransformation(
@@ -613,11 +616,12 @@ export default class Editor {
       name: transformationFn.displayName,
       transformationFn: deferredTransormation,
       applyToAll: this._applyToAll,
+      args: args,
     })
   }
 
-  private applyRect(coords: RectCoords, fillFn: FillFn) {
-    this.genericTransformation(rect, coords, fillFn)
+  private applyRect(coords: RectCoords, fillFn: FillFn, ...args: unknown[]) {
+    this.genericTransformation(rect, coords, fillFn, args)
   }
 
   private fill(colour: string) {
@@ -626,7 +630,7 @@ export default class Editor {
   }
 
   private rotate() {
-    const angle = (Math.PI / 2) * this.rotationCounter++
+    const angle = Math.PI / 2
     this.genericTransformation(rotate, angle)
   }
 
@@ -649,7 +653,7 @@ export default class Editor {
   }
 
   private showTooltip(message: string) {
-    this.tooltipCont.innerText = message
+    this.tooltipCont.innerHTML = message
     swapClasses(this.tooltipCont, 'hide', 'show')
   }
 
@@ -667,6 +671,39 @@ export default class Editor {
 
     this.tooltipCont.style.left = `${clientX + 10}px`
     this.tooltipCont.style.top = `${offsetY}px`
+  }
+
+  private stringifyTransformationCache() {
+    const transformationDescriptionReducer = ({
+      name,
+      args,
+    }: Omit<TransformationCache, 'transformationFn' | 'applyToAll'>) => {
+      switch (name) {
+        case 'Scale':
+          return `Scaling by a factor of ${(args[0] as number).toFixed(2)}`
+        case 'Rotate':
+          return `Rotating ${toDeg(args[0] as number).toFixed(1)}&deg;`
+        case 'Fill':
+          return `Filling entire image with ${(args[0] as number).toFixed(2)}`
+        case 'Fill Rect': {
+          const colour = (args[args.length - 1] as number[])[0] as number
+          if (colour === undefined) return `Drawing with brush`
+          return `Drawing a rectangle with colour ${colour.toFixed(1)}`
+        }
+      }
+    }
+
+    return this._transformationCache.reduce(
+      (output, { name, applyToAll, args }) => {
+        return (
+          output +
+          `${transformationDescriptionReducer({ name, args })}${
+            applyToAll ? ' *<br>' : '<br>'
+          }`
+        )
+      },
+      '<em>Pending Transformations: (* = to stack)</em><br>',
+    )
   }
 
   public get applyToAll() {

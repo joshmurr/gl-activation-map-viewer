@@ -5,6 +5,12 @@
 @import '~include-media/dist/_include-media.scss';
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap');
 
+/* $breakpoints: ( */
+/*   'phone': 320px, */
+/*   'tablet': 768px, */
+/*   'desktop': 1024px */
+/* ) !default; */
+
 html {
   box-sizing: border-box;
   scroll-behavior: smooth;
@@ -66,6 +72,8 @@ reset {
   }
 
   .sidebar {
+    top: 0;
+    right: 0;
     padding: 1rem;
     border-radius: 0.5rem;
     background: $modal-bg;
@@ -93,6 +101,7 @@ reset {
       min-width: 30%;
     }
     &__item {
+      pointer-events: none;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -100,6 +109,7 @@ reset {
         background: $slate-100;
         width: 128px;
         height: 128px;
+        pointer-events: auto;
 
         image-rendering: crisp-edges; /* for firefox */
         image-rendering: pixelated; /* for everything else */
@@ -153,6 +163,10 @@ reset {
   }
 
   .editor-wrapper {
+    pointer-events: none;
+    & > * {
+      pointer-events: auto;
+    }
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -284,12 +298,10 @@ reset {
   position: fixed;
   background: $lime-50;
   z-index: 10;
-  width: 300px;
+  width: 360px;
   padding: 15px;
   border-radius: 0.5rem;
   filter: $shadow;
-  /* top: -10px; */
-  /* left: 640px; */
 }
 
 .loading {
@@ -328,4 +340,8 @@ reset {
 section {
   &__inner {
   }
+}
+
+.draggable {
+  position: absolute;
 }

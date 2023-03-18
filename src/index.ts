@@ -53,6 +53,7 @@ let mouseOnSlice = false
 let oldPickNdx = -1
 
 let gen: Generator
+let currentZ: tf.Tensor2D
 
 const gui = new GUI(document.querySelector('.sidebar'))
 const base = document.getElementById('model-base-output') as HTMLCanvasElement
@@ -87,6 +88,7 @@ async function init() {
   pctEl.innerText = '0%'
 
   const MODEL_INFO = modelInfo[chosenModel]
+  currentZ = tf.randomNormal([1, MODEL_INFO.latent_dim]) as Tensor2D
 
   if (gen) gen.dispose()
   gen = new Generator(MODEL_INFO)
@@ -102,7 +104,7 @@ async function init() {
       }
     },
   })
-  vis.init(gen)
+  vis.init(gen, currentZ)
   let layers = vis.getActivations(G, program, MODEL_INFO)
 
   const handleInitialOutputClick = () => {
@@ -140,13 +142,13 @@ async function init() {
     const randBtn = document.querySelector('.rand-btn') as HTMLButtonElement
     randBtn.innerText = 'Loading...'
 
-    waitForRepaint(async () => {
+    return waitForRepaint(async () => {
       /**
        * We're not tf.tidy-ing here so we don't dispose the tensor
        * so that we can render it in the gui callbacks above using
        * `initialAct`.
        */
-      const currentZ = tf.randomNormal([1, MODEL_INFO.latent_dim]) as Tensor2D
+      currentZ = tf.randomNormal([1, MODEL_INFO.latent_dim]) as Tensor2D
       const logits = gen.run(currentZ) as tf.Tensor
       vis.update(currentZ)
       layers = vis.getActivations(G, program, MODEL_INFO)
@@ -154,13 +156,14 @@ async function init() {
 
       if (MODEL_INFO.data_format === 'channels_first') {
         await gen.displayOutTranspose(logits, gui.output.base)
-        currentZ.dispose()
+        /* currentZ.dispose() */
       } else {
         await gen.displayOut(logits, gui.output.base)
-        currentZ.dispose()
+        /* currentZ.dispose() */
       }
 
       randBtn.innerText = 'Random'
+      editor.changesMade = false
     })
   }
 
@@ -169,41 +172,46 @@ async function init() {
       '.predict-btn',
     ) as HTMLButtonElement
     predictBtn.innerText = 'Loading...'
-    editor.changesMade = false
     predictBtn.classList.remove('look-at-me')
 
-    waitForRepaint(() => {
-      return tf.tidy(() => {
-        const tfLayers = vis.tfLayers
-        const layer = currentActSelection.layer
-          ? currentActSelection.layer
-          : layers[0]
-        const { name } = layer
-
-        const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
-        const sliced = tfLayers.slice(idx)
-
-        const { act } = editor.remakeActivation(layer, MODEL_INFO)
-
-        const activations = gen.runLayersGen(sliced, act, idx)
-
-        let logits = null
-
-        let layerIdx = idx
-        const layerOffset = Math.abs(tfLayers.length - layers.length)
-        for ({ logits, layerIdx } of activations) {
-          const layer = layers[layerIdx - layerOffset]
-          vis.putActivations(layer, logits, MODEL_INFO)
-        }
-
-        if (MODEL_INFO.data_format === 'channels_first') {
-          gen.displayOutTranspose(logits, gui.output.output)
-        } else {
-          gen.displayOut(logits, gui.output.output)
-        }
-
+    if (!editor.changesMade) {
+      return waitForRepaint(() => {
+        console.log('no changes made')
+        const logits = gen.run(currentZ) as tf.Tensor
+        gen.displayOutTranspose(logits, gui.output.output)
         predictBtn.innerText = 'Predict'
       })
+    }
+
+    return waitForRepaint(() => {
+      const tfLayers = vis.tfLayers
+      const layer = currentActSelection.layer
+        ? currentActSelection.layer
+        : layers[0]
+      const { name } = layer
+
+      const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
+      const sliced = tfLayers.slice(idx)
+
+      const { act } = editor.remakeActivation(layer, MODEL_INFO)
+
+      const activations = gen.runLayersGen(sliced, act, idx)
+
+      let layerIdx = idx
+      let logits = null
+      const layerOffset = Math.abs(tfLayers.length - layers.length)
+      for ({ logits, layerIdx } of activations) {
+        const layer = layers[layerIdx - layerOffset]
+        vis.putActivations(layer, logits, MODEL_INFO)
+      }
+
+      if (MODEL_INFO.data_format === 'channels_first') {
+        gen.displayOutTranspose(logits, gui.output.output)
+      } else {
+        gen.displayOut(logits, gui.output.output)
+      }
+
+      predictBtn.innerText = 'Predict'
     })
   }
 
@@ -249,13 +257,6 @@ async function init() {
   gui.initAccordions(accordions)
 
   function draw(time: number) {
-    if (editor.changesMade) {
-      const predictBtn = document.querySelector(
-        '.predict-btn',
-      ) as HTMLButtonElement
-      predictBtn.classList.add('look-at-me')
-    }
-
     // PICKING ----------------------
     gl.useProgram(pickProgram)
     gl.clearColor(1, 1, 1, 1)
@@ -364,12 +365,14 @@ async function init() {
     }
   }
 
-  function handleMouseDown() {
+  function handleMouseDown(e: MouseEvent) {
+    e.stopPropagation()
     if (!mouseOnSlice) return false
     editor.show(currentActSelection, MODEL_INFO)
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: MouseEvent) {
+    e.stopPropagation()
     if (!mouseOnSlice) return false
     editor.show(currentActSelection, MODEL_INFO)
   }
