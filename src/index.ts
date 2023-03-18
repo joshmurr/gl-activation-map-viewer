@@ -365,12 +365,14 @@ async function init() {
     }
   }
 
-  function handleMouseDown() {
+  function handleMouseDown(e: MouseEvent) {
+    e.stopPropagation()
     if (!mouseOnSlice) return false
     editor.show(currentActSelection, MODEL_INFO)
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: MouseEvent) {
+    e.stopPropagation()
     if (!mouseOnSlice) return false
     editor.show(currentActSelection, MODEL_INFO)
   }

@@ -11,6 +11,7 @@ type StylePos = {
 
 export default class Draggable {
   private _container: HTMLElement
+  private _drag = false
   private _pos = {
     x1: 0,
     y1: 0,
@@ -35,8 +36,8 @@ export default class Draggable {
     }
 
     const closeDragElement = () => {
-      document.onmouseup = null
-      document.onmousemove = null
+      this._container.removeEventListener('mouseup', closeDragElement)
+      this._container.removeEventListener('mousemove', handleDrag)
     }
 
     function percentageToPixel(x: number, y: number) {
@@ -52,17 +53,34 @@ export default class Draggable {
       }
     }
 
+    const handleMouseOver = (e: MouseEvent) => {
+      if (e.target === this._container) {
+        this._drag = true
+        document.body.style.cursor = 'move'
+      } else {
+        this._drag = false
+        document.body.style.cursor = 'default'
+      }
+    }
+
+    const handleMouseOut = () => {
+      this._drag = false
+      document.body.style.cursor = 'default'
+    }
+
     const handleMouseDown = (e: MouseEvent) => {
-      e.preventDefault()
       this._pos.x2 = e.clientX
       this._pos.y2 = e.clientY
 
-      document.onmouseup = closeDragElement
-      document.onmousemove = handleDrag
+      this._container.addEventListener('mouseup', closeDragElement)
+      this._container.addEventListener('mousemove', handleDrag)
     }
 
     const handleDrag = (e: MouseEvent) => {
-      e.preventDefault()
+      if (!this._drag) {
+        console.log('not dragging')
+        return
+      }
       this._pos.x1 = this._pos.x2 - e.clientX
       this._pos.y1 = this._pos.y2 - e.clientY
       this._pos.x2 = e.clientX
@@ -94,6 +112,8 @@ export default class Draggable {
     }
 
     this._container.addEventListener('mousedown', handleMouseDown)
+    this._container.addEventListener('mouseover', handleMouseOver)
+    this._container.addEventListener('mouseout', handleMouseOut)
   }
 
   public appendChild(el: HTMLElement) {

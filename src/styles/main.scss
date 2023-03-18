@@ -96,6 +96,7 @@ reset {
       min-width: 30%;
     }
     &__item {
+      pointer-events: none;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -103,6 +104,7 @@ reset {
         background: $slate-100;
         width: 128px;
         height: 128px;
+        pointer-events: auto;
 
         image-rendering: crisp-edges; /* for firefox */
         image-rendering: pixelated; /* for everything else */
@@ -156,6 +158,10 @@ reset {
   }
 
   .editor-wrapper {
+    pointer-events: none;
+    & > * {
+      pointer-events: auto;
+    }
     display: flex;
     flex-direction: column;
     justify-content: center;
