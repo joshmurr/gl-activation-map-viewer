@@ -167,9 +167,7 @@ export default class Editor {
         step: 1,
         value: 6,
         outputId: 'brush-size',
-        callback: (e: MouseEvent) => {
-          /* e.stopPropagation() */
-          console.log(e)
+        callback: () => {
           const el = document.querySelector(
             'input[name="brush"]',
           ) as HTMLInputElement
@@ -188,8 +186,7 @@ export default class Editor {
         step: 0.1,
         value: 1,
         outputId: 'scale-factor',
-        callback: (e: MouseEvent) => {
-          /* e.stopPropagation() */
+        callback: () => {
           const el = document.querySelector(
             'input[name="scale"]',
           ) as HTMLInputElement
