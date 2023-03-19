@@ -202,12 +202,9 @@ async function init() {
       for ({ logits, layerIdx } of activations) {
         const layer = layers[layerIdx - layerOffset]
         vis.putActivations(layer, logits, MODEL_INFO)
-        console.log('[predict:of-activations]: ', act)
-        if (!logits) debugger
       }
 
       if (MODEL_INFO.data_format === 'channels_first') {
-        console.log('[predict]: ', logits)
         gen.displayOutTranspose(logits, gui.output.output)
       } else {
         gen.displayOut(logits, gui.output.output)
