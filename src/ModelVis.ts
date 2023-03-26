@@ -132,7 +132,7 @@ export default class ModelVis {
     sepActs.forEach((act, actIdx) => {
       const data = act.dataSync()
       const quad = layer.activations[actIdx]
-      console.log('[putActivations]: ', act)
+      /* console.log('[putActivations]: ', act) */
       quad.update(data)
       act.dispose()
     })
