@@ -11,7 +11,6 @@ import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
 import {
   findLayer,
   getLayerDims,
-  promiseWithTimeout,
   promiseWithTimeoutAndDelay,
   swapClasses,
   waitForRepaint,
