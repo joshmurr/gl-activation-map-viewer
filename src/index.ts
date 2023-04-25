@@ -163,10 +163,8 @@ async function init() {
 
       if (MODEL_INFO.data_format === 'channels_first') {
         await gen.displayOutTranspose(logits, gui.output.base)
-        /* currentZ.dispose() */
       } else {
         await gen.displayOut(logits, gui.output.base)
-        /* currentZ.dispose() */
       }
 
       randBtn.innerText = 'Random'
@@ -187,7 +185,6 @@ async function init() {
           const logits = gen.run(currentZ) as tf.Tensor
           if (logits) {
             predictBtn.innerText = 'Predict'
-            console.log('[resolve]: ', currentZ.dataSync())
             resolve(gen.displayOutTranspose(logits, gui.output.output))
           } else {
             reject(new Error('Error displaying image'))
@@ -225,12 +222,11 @@ async function init() {
         for ({ logits, layerIdx } of activations) {
           const layer = layers[layerIdx - layerOffset]
           vis.putActivations(layer, logits, MODEL_INFO)
-          /* console.log('[predict:of-activations]: ', act) */
+          predictBtn.innerText = 'Predict'
         }
         if (!logits) reject('Error displaying image')
 
         if (MODEL_INFO.data_format === 'channels_first') {
-          /* console.log('[predict]: ', logits) */
           resolve(gen.displayOutTranspose(logits, gui.output.output))
         } else {
           resolve(gen.displayOut(logits, gui.output.output))
