@@ -8,7 +8,13 @@ import GUI from './GUI'
 import type { Tensor, Tensor2D } from '@tensorflow/tfjs'
 import Editor from './Editor'
 import { pickingFrag, pickingVert, renderFrag, renderVert } from './shaders'
-import { findLayer, getLayerDims, swapClasses, waitForRepaint } from './utils'
+import {
+  findLayer,
+  getLayerDims,
+  promiseWithTimeoutAndDelay,
+  swapClasses,
+  waitForRepaint,
+} from './utils'
 import './styles/main.scss'
 import { modelInfo } from './modelInfo'
 
@@ -156,10 +162,8 @@ async function init() {
 
       if (MODEL_INFO.data_format === 'channels_first') {
         await gen.displayOutTranspose(logits, gui.output.base)
-        /* currentZ.dispose() */
       } else {
         await gen.displayOut(logits, gui.output.base)
-        /* currentZ.dispose() */
       }
 
       randBtn.innerText = 'Random'
@@ -175,46 +179,68 @@ async function init() {
     predictBtn.classList.remove('look-at-me')
 
     if (!editor.changesMade) {
-      return waitForRepaint(() => {
-        const logits = gen.run(currentZ) as tf.Tensor
-        gen.displayOutTranspose(logits, gui.output.output)
-        predictBtn.innerText = 'Predict'
-      })
+      const { promiseOrTimeout, timeoutId } = promiseWithTimeoutAndDelay(
+        new Promise((resolve, reject) => {
+          const logits = gen.run(currentZ) as tf.Tensor
+          if (logits) {
+            predictBtn.innerText = 'Predict'
+            resolve(gen.displayOutTranspose(logits, gui.output.output))
+          } else {
+            reject(new Error('Error displaying image'))
+          }
+        }),
+      )
+
+      try {
+        return await promiseOrTimeout
+      } catch (error) {
+        console.error(error)
+      } finally {
+        clearTimeout(timeoutId)
+      }
     }
 
-    return waitForRepaint(() => {
-      const tfLayers = vis.tfLayers
-      const layer = currentActSelection.layer
-        ? currentActSelection.layer
-        : layers[0]
-      const { name } = layer
+    const { promiseOrTimeout, timeoutId } = promiseWithTimeoutAndDelay(
+      new Promise((resolve, reject) => {
+        const tfLayers = vis.tfLayers
+        const layer = currentActSelection.layer
+          ? currentActSelection.layer
+          : layers[0]
+        const { name } = layer
 
-      const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
-      const sliced = tfLayers.slice(idx)
+        const idx = tfLayers.indexOf(tfLayers.find((l) => l.name === name)) + 1
+        const sliced = tfLayers.slice(idx)
 
-      const { act } = editor.remakeActivation(layer, MODEL_INFO)
+        const { act } = editor.remakeActivation(layer, MODEL_INFO)
 
-      const activations = gen.runLayersGen(sliced, act, idx)
+        const activations = gen.runLayersGen(sliced, act, idx)
 
-      let layerIdx = idx
-      let logits = null
-      const layerOffset = Math.abs(tfLayers.length - layers.length)
-      for ({ logits, layerIdx } of activations) {
-        const layer = layers[layerIdx - layerOffset]
-        vis.putActivations(layer, logits, MODEL_INFO)
-        console.log('[predict:of-activations]: ', act)
-        if (!logits) debugger
-      }
+        let layerIdx = idx
+        let logits = null
+        const layerOffset = Math.abs(tfLayers.length - layers.length)
+        for ({ logits, layerIdx } of activations) {
+          const layer = layers[layerIdx - layerOffset]
+          vis.putActivations(layer, logits, MODEL_INFO)
+          predictBtn.innerText = 'Predict'
+        }
+        if (!logits) reject('Error displaying image')
 
-      if (MODEL_INFO.data_format === 'channels_first') {
-        console.log('[predict]: ', logits)
-        gen.displayOutTranspose(logits, gui.output.output)
-      } else {
-        gen.displayOut(logits, gui.output.output)
-      }
+        if (MODEL_INFO.data_format === 'channels_first') {
+          resolve(gen.displayOutTranspose(logits, gui.output.output))
+        } else {
+          resolve(gen.displayOut(logits, gui.output.output))
+        }
+      }),
+    )
+    try {
+      return await promiseOrTimeout
+    } catch (error) {
+      console.error(error)
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
-      predictBtn.innerText = 'Predict'
-    })
+    predictBtn.innerText = 'Predict'
   }
 
   const buttons: Button[] = [

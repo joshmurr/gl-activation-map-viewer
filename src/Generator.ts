@@ -51,7 +51,7 @@ export default class Generator extends Model {
         .add(tf.scalar(0.5)) as tf.Tensor2D
       return this.image_enlarge(y, this.info.draw_multiplier)
     }) as tf.Tensor2D
-    await tf.browser.toPixels(y, canvas)
+    return tf.browser.toPixels(y, canvas)
   }
 
   public getLayerOutputs(layers: tf.layers.Layer[], X: tf.Tensor) {

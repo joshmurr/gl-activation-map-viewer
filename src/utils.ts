@@ -115,3 +115,34 @@ export const getLayerDims = (shape: number[], dataFormat: string) => {
 }
 
 export const toDeg = (rad: number) => rad * 57.29578
+
+export const promiseWithTimeout = <T>(promise: Promise<T>) => {
+  let timeoutId
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Request timed out'))
+    }, 4000)
+  })
+  return {
+    promiseOrTimeout: Promise.race([promise, timeoutPromise]),
+    timeoutId,
+  }
+}
+
+export const promiseWithTimeoutAndDelay = <T>(promise: Promise<T>) => {
+  let timeoutId
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Request timed out'))
+    }, 4000)
+  })
+
+  const delayedPromise = new Promise((resolve) => {
+    setTimeout(() => resolve(promise), 1000)
+  })
+
+  return {
+    promiseOrTimeout: Promise.race([delayedPromise, timeoutPromise]),
+    timeoutId,
+  }
+}
