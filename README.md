@@ -7,3 +7,5 @@ This is an experiment in developing an interactive version of Terence Broad's [N
 ### [Live demo here](https://gl-activation-map-viewer.vercel.app)
 
 The process is somewhat temperamental so video of the tool in action below:
+
+https://github.com/joshmurr/gl-activation-map-viewer/assets/3018563/a8828dc0-487e-49bf-ac95-d9b9924782f2
