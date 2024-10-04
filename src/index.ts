@@ -223,7 +223,11 @@ async function init() {
           vis.putActivations(layer, logits, MODEL_INFO)
           predictBtn.innerText = 'Predict'
         }
-        if (!logits) reject('Error displaying image')
+
+        if (!logits) {
+          reject('Error displaying image')
+          return
+        }
 
         if (MODEL_INFO.data_format === 'channels_first') {
           resolve(gen.displayOutTranspose(logits, gui.output.output))
@@ -235,7 +239,6 @@ async function init() {
     try {
       return await promiseOrTimeout
     } catch (error) {
-      console.error(error)
     } finally {
       clearTimeout(timeoutId)
     }

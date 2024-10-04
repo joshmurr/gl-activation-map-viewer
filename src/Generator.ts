@@ -79,9 +79,13 @@ export default class Generator extends Model {
   ) {
     let logits = activation
     for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i]
-      logits = layer.call(logits, { training: false }) as tf.Tensor
-      yield { layerIdx: layerIdxOffset + i, logits }
+      try {
+        const layer = layers[i]
+        logits = layer.call(logits, { training: false }) as tf.Tensor
+        yield { layerIdx: layerIdxOffset + i, logits }
+      } catch (e) {
+        console.error('Error in runLayersGen', e)
+      }
     }
   }
 }
