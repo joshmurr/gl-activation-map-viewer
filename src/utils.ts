@@ -134,15 +134,18 @@ export const promiseWithTimeoutAndDelay = <T>(promise: Promise<T>) => {
   const timeoutPromise = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error('Request timed out'))
-    }, 4000)
+    }, 10000) // Increased timeout to 10 seconds
   })
 
-  const delayedPromise = new Promise((resolve) => {
-    setTimeout(() => resolve(promise), 1000)
-  })
+  // Process the original promise immediately, but still return it after a minimum delay
+  // This ensures any UI updates have time to render
+  const processNowShowLater = Promise.all([
+    promise,
+    new Promise(resolve => setTimeout(resolve, 500)) // Minimum 500ms display time for "Loading..."
+  ]).then(([result]) => result)
 
   return {
-    promiseOrTimeout: Promise.race([delayedPromise, timeoutPromise]),
+    promiseOrTimeout: Promise.race([processNowShowLater, timeoutPromise]),
     timeoutId,
   }
 }

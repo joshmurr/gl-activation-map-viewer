@@ -186,7 +186,9 @@ async function init() {
             predictBtn.innerText = 'Predict'
             resolve(gen.displayOutTranspose(logits, gui.output.output))
           } else {
+            predictBtn.innerText = 'Predict'
             reject(new Error('Error displaying image'))
+            return
           }
         }),
       )
@@ -225,7 +227,8 @@ async function init() {
         }
 
         if (!logits) {
-          reject('Error displaying image')
+          predictBtn.innerText = 'Predict'
+          reject(new Error('Error displaying image'))
           return
         }
 
@@ -239,11 +242,11 @@ async function init() {
     try {
       return await promiseOrTimeout
     } catch (error) {
+      console.log('error', error)
+      predictBtn.innerText = 'Predict'
     } finally {
       clearTimeout(timeoutId)
     }
-
-    predictBtn.innerText = 'Predict'
   }
 
   const buttons: Button[] = [
