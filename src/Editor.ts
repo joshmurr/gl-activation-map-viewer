@@ -637,7 +637,7 @@ export default class Editor {
 
   private screenScale(w: number) {
     const maxLen = Math.min(window.innerHeight, window.innerWidth)
-    const targetSize = maxLen * 0.75
+    const targetSize = maxLen * 0.6
     const scale = targetSize / w
     return scale
   }

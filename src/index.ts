@@ -172,9 +172,7 @@ async function init() {
   }
 
   const predict = async () => {
-    const predictBtn = document.querySelector(
-      '.predict-btn',
-    ) as HTMLButtonElement
+    const predictBtn = document.querySelector<HTMLButtonElement>('.predict-btn')
     predictBtn.innerText = 'Loading...'
     predictBtn.classList.remove('look-at-me')
 
