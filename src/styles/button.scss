@@ -1,6 +1,8 @@
+@use "variables";
+
 .btn,
 button {
-  background-color: $slate-200;
+  background-color: variables.$slate-200;
   border-radius: 3px;
   padding: 0.4rem 0.8rem;
   color: #000;
@@ -12,15 +14,15 @@ button {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  filter: $button-border;
+  filter: variables.$button-border;
   transition: transform 10ms;
 }
 
 /* button:not(:disabled):focus { */
 button:not(:disabled):hover {
-  background: $slate-400;
-  filter: $button-pressed;
-  transform: translate($button-offset, $button-offset);
+  background: variables.$slate-400;
+  filter: variables.$button-pressed;
+  transform: translate(variables.$button-offset, variables.$button-offset);
 }
 
 button:disabled {

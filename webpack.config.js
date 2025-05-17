@@ -37,7 +37,16 @@ module.exports = {
         use: [
           devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
           'css-loader',
-          'sass-loader',
+          {
+            loader: 'sass-loader',
+            options: {
+              implementation: require('sass'),
+              sassOptions: {
+                includePaths: ['src/styles', './node_modules'],
+                silenceDeprecations: ['legacy-js-api'],
+              },
+            },
+          },
         ],
       },
     ],

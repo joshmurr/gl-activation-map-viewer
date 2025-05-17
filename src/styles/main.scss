@@ -1,8 +1,8 @@
-@import 'variables';
-@import 'button';
-@import 'slider';
-@import 'accordian';
-@import '~include-media/dist/_include-media.scss';
+@use 'variables';
+@use 'button';
+@use 'slider';
+@use 'accordian';
+@use '~include-media/dist/_include-media.scss';
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap');
 
 /* $breakpoints: ( */
@@ -23,7 +23,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background-color: $slate-50;
+  background-color: variables.$slate-50;
   padding-bottom: 3rem;
   overflow-x: hidden;
   font-family: 'Open Sans', sans-serif;
@@ -76,20 +76,20 @@ reset {
     right: 0;
     padding: 1rem;
     border-radius: 0.5rem;
-    background: $modal-bg;
-    filter: $shadow;
+    background: variables.$modal-bg;
+    filter: variables.$shadow;
 
-    @include media('<tablet') {
+    @include include-media.media('<tablet') {
       width: calc(100% - 2rem);
       margin: 1rem;
     }
 
-    @include media('>=tablet', '<desktop') {
+    @include include-media.media('>=tablet', '<desktop') {
       margin: 1rem auto;
       max-width: 560px;
     }
 
-    @include media('>=desktop') {
+    @include include-media.media('>=desktop') {
       position: absolute;
       top: 0;
       right: 0;
@@ -106,7 +106,7 @@ reset {
       justify-content: space-between;
       align-items: center;
       canvas {
-        background: $slate-100;
+        background: variables.$slate-100;
         width: 128px;
         height: 128px;
         pointer-events: auto;
@@ -142,16 +142,16 @@ reset {
   position: fixed;
   top: 1rem;
   left: 1rem;
-  background-color: $modal-bg;
+  background-color: variables.$modal-bg;
   padding: 1rem;
   border-radius: 1rem;
-  filter: $shadow;
+  filter: variables.$shadow;
 
   #close {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    background-color: $lime-300;
+    background-color: variables.$lime-300;
     padding: 0.8rem 1.1rem;
     font-weight: bold;
     font-size: x-large;
@@ -159,20 +159,21 @@ reset {
 
   #close:not(:disabled):hover,
   #close:not(:disabled):focus {
-    background: $lime-400;
+    background: variables.$lime-400;
   }
 
   .editor-wrapper {
     pointer-events: none;
-    & > * {
-      pointer-events: auto;
-    }
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: 1rem;
     width: 100%;
+
+    & > * {
+      pointer-events: auto;
+    }
 
     .canvas-cont {
       position: relative;
@@ -187,7 +188,7 @@ reset {
       }
 
       canvas:first-child {
-        filter: $shadow;
+        filter: variables.$shadow;
       }
     }
   }
@@ -227,18 +228,18 @@ reset {
   }
 
   .commit {
-    background-color: $lime-200;
+    background-color: variables.$lime-200;
 
     &:hover {
-      background-color: $lime-300;
+      background-color: variables.$lime-300;
     }
   }
 
   .cancel {
-    background-color: $slate-400;
+    background-color: variables.$slate-400;
 
     &:hover {
-      background-color: $slate-500;
+      background-color: variables.$slate-500;
     }
   }
 
@@ -281,9 +282,12 @@ reset {
 }
 
 .active {
-  filter: $button-pressed !important;
-  transform: translate($button-offset, $button-offset) !important;
-  background: $accent !important;
+  filter: variables.$button-pressed !important;
+  transform: translate(
+    variables.$button-offset,
+    variables.$button-offset
+  ) !important;
+  background: variables.$accent !important;
 
   &:after {
     content: ' \02713';
@@ -291,17 +295,17 @@ reset {
 }
 
 .look-at-me {
-  background: $lime-300 !important;
+  background: variables.$lime-300 !important;
 }
 
 .tooltip {
   position: fixed;
-  background: $lime-50;
+  background: variables.$lime-50;
   z-index: 10;
   width: 360px;
   padding: 15px;
   border-radius: 0.5rem;
-  filter: $shadow;
+  filter: variables.$shadow;
 }
 
 .loading {
@@ -320,8 +324,8 @@ reset {
     width: 300px;
     height: 200px;
     padding: 20px;
-    background: $white;
-    filter: $shadow;
+    background: variables.$white;
+    filter: variables.$shadow;
     border-radius: 0.5rem;
     text-align: center;
     top: 50%;

@@ -1,5 +1,7 @@
+@use "variables";
+
 .accordion {
-  background-color: $slate-200;
+  background-color: variables.$slate-200;
   cursor: pointer;
   padding: 18px;
   width: 100%;
@@ -18,13 +20,13 @@
   }
 
   &:not(:disabled):hover {
-    background: $slate-300;
+    background: variables.$slate-300;
     filter: none;
   }
 }
 
 .panel {
-  background-color: $white;
+  background-color: variables.$white;
   overflow: hidden;
   max-height: 0;
   transition: max-height 0.4s ease-out;
