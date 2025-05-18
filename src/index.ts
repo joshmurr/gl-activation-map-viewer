@@ -17,6 +17,7 @@ import {
 } from './utils'
 import './styles/main.scss'
 import { modelInfo } from './modelInfo'
+import { PREDICT_BTN_TEXT, RANDOM_BTN_TEXT } from './constants'
 
 const G = new GL_Handler()
 const containerEl = document.getElementById('model-vis-container')
@@ -84,6 +85,7 @@ async function init() {
     layerName: 'none',
     layer: null,
   }
+  const currentActHover = { ...currentActSelection }
 
   // MODEL ------------------------------
   document.body.classList.add('hideOverflow')
@@ -166,7 +168,7 @@ async function init() {
         await gen.displayOut(logits, gui.output.base)
       }
 
-      randBtn.innerText = 'Random'
+      randBtn.innerText = RANDOM_BTN_TEXT
       editor.changesMade = false
     })
   }
@@ -181,10 +183,10 @@ async function init() {
         new Promise((resolve, reject) => {
           const logits = gen.run(currentZ) as tf.Tensor
           if (logits) {
-            predictBtn.innerText = 'Predict'
+            predictBtn.innerText = PREDICT_BTN_TEXT
             resolve(gen.displayOutTranspose(logits, gui.output.output))
           } else {
-            predictBtn.innerText = 'Predict'
+            predictBtn.innerText = PREDICT_BTN_TEXT
             reject(new Error('Error displaying image'))
             return
           }
@@ -221,11 +223,11 @@ async function init() {
         for ({ logits, layerIdx } of activations) {
           const layer = layers[layerIdx - layerOffset]
           vis.putActivations(layer, logits, MODEL_INFO)
-          predictBtn.innerText = 'Predict'
+          predictBtn.innerText = PREDICT_BTN_TEXT
         }
 
         if (!logits) {
-          predictBtn.innerText = 'Predict'
+          predictBtn.innerText = PREDICT_BTN_TEXT
           reject(new Error('Error displaying image'))
           return
         }
@@ -241,7 +243,7 @@ async function init() {
       return await promiseOrTimeout
     } catch (error) {
       console.log('error', error)
-      predictBtn.innerText = 'Predict'
+      predictBtn.innerText = PREDICT_BTN_TEXT
     } finally {
       clearTimeout(timeoutId)
     }
@@ -312,11 +314,9 @@ async function init() {
       })
 
       // Mouse pixel ---------
-      const pixelX = (mouseX * gl.canvas.width) / gl.canvas.clientWidth
+      const pixelX = (mouseX * gl.canvas.width) / canvas.clientWidth
       const pixelY =
-        gl.canvas.height -
-        (mouseY * gl.canvas.height) / gl.canvas.clientHeight -
-        1
+        gl.canvas.height - (mouseY * gl.canvas.height) / canvas.clientHeight - 1
       const data = new Uint8Array(4)
       gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data)
       const id = data[0] + (data[1] << 8) + (data[2] << 16)
@@ -385,27 +385,25 @@ async function init() {
         layerName,
         layer,
       }
-      Object.assign(currentActSelection, selection)
+      Object.assign(currentActHover, selection)
+      if (mouseOnSlice) {
+        console.log('mouseOnSlice', mouseOnSlice)
+        const idEl = document.querySelector(
+          '#sidebar__debug__id',
+        ) as HTMLElement
+        const layerNameEl = document.querySelector(
+          '#sidebar__debug__layername',
+        ) as HTMLElement
+        idEl.innerText = selection.id.toString()
+        layerNameEl.innerText = selection.layerName
+      }
     }
-    if (mouseOnSlice) {
-      const idEl = document.querySelector('#sidebar__debug__id') as HTMLElement
-      const layerNameEl = document.querySelector(
-        '#sidebar__debug__layername',
-      ) as HTMLElement
-      idEl.innerText = currentActSelection.id.toString()
-      layerNameEl.innerText = currentActSelection.layerName
-    }
-  }
-
-  function handleMouseDown(e: MouseEvent) {
-    e.stopPropagation()
-    if (!mouseOnSlice) return false
-    editor.show(currentActSelection, MODEL_INFO)
   }
 
   function handleMouseUp(e: MouseEvent) {
     e.stopPropagation()
     if (!mouseOnSlice) return false
+    Object.assign(currentActSelection, currentActHover)
     editor.show(currentActSelection, MODEL_INFO)
   }
 
@@ -415,7 +413,6 @@ async function init() {
   }
 
   canvas.addEventListener('mousemove', handleMouseMove)
-  canvas.addEventListener('mousedown', handleMouseDown)
   canvas.addEventListener('mouseup', handleMouseUp)
   document.addEventListener('keydown', handleKeyDown)
 
