@@ -25,7 +25,7 @@
           <p>
             Try clicking on a slice of an activation map below to open up the
             editor. Once you have made a change close the editor and clicking
-            <span class="btn">Predict</span> in the sidebar to run the model.
+            <span class="btn">Run</span> in the sidebar to run the model.
           </p>
           <p><a href="#section-2">See below for more information.</a></p>
         </div>
@@ -72,8 +72,8 @@
             Machine learning papers often try to address this with large block
             diagrams which represent the inner workings of the model. The
             diagrams aim to join the dots from input to output showing the
-            reader how data is transformed from start to finished. For example
-            see the the diagram used in
+            reader how data is transformed from start to finish. For example see
+            the the diagram used in
             <a href="https://arxiv.org/abs/1511.06434"
               >Unsupervised Representation Learning with Deep Convolutional
               Generative Adversarial Networks </a
@@ -122,7 +122,7 @@
             shape of the face, the large colour groups, the postion of the face
             and so on. Whereas the later layers generally make impacts and a
             <i>lower level</i>. This can be thought of as getting closer to
-            pixel level where changes are very local and may just affect sublte
+            pixel level where changes are very local and may just affect subtle
             patterns found in the hair for example.
           </p>
         </div>
@@ -153,6 +153,20 @@
           <a class="panel__attribution" href="https://arxiv.org/abs/1912.04958"
             >Source</a
           >
+          <p>
+            This demo works as a proof of concept and it only provides
+            mechanisms for visualising convolutional layers. The modular nature
+            of model architectures means that it is possible to extend this to
+            work with other layers. A simple next step would be to at least show
+            the input vector - the ability to tweak the values of the input
+            <em>might</em> help the user find a starting point they like before
+            manipulating. It would also be interesting to explore more abstract
+            models which do not necessarily produce a representation we
+            understand (such as a face), but more abstract imagery. Manipulating
+            data, or <em>drawing</em>, in a high-level space as opposed to
+            pixel-space, such as the lower layers of a model, is quite an
+            exciting prospect for creating new artistic tools.
+          </p>
         </div>
       </section>
     </div>
